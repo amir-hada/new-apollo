@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ApolloShop.Api/ApolloShop.Api.csproj" />
+    <Project Path="src/ApolloShop.Application/ApolloShop.Application.csproj" />
+    <Project Path="src/ApolloShop.Domain/ApolloShop.Domain.csproj" />
+    <Project Path="src/ApolloShop.Infrastructure/ApolloShop.Infrastructure.csproj" />
+    <Project Path="src/ApolloShop.Persistence/ApolloShop.Persistence.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ApolloShop.Application.Tests/ApolloShop.Application.Tests.csproj" />
+    <Project Path="tests/ApolloShop.Domain.Tests/ApolloShop.Domain.Tests.csproj" />
+    <Project Path="tests/ApolloShop.IntegrationTests/ApolloShop.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

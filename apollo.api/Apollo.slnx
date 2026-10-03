@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Apollo.Api/Apollo.Api.csproj" />
+    <Project Path="src/Apollo.Application/Apollo.Application.csproj" />
+    <Project Path="src/Apollo.Domain/Apollo.Domain.csproj" />
+    <Project Path="src/Apollo.Infrastructure/Apollo.Infrastructure.csproj" />
+  </Folder>
+</Solution>

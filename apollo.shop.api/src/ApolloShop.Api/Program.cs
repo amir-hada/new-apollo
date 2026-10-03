@@ -1,0 +1,88 @@
+using System.Threading.RateLimiting;
+using ApolloShop.Api.Middleware;
+using ApolloShop.Application;
+using ApolloShop.Infrastructure;
+using ApolloShop.Infrastructure.Options;
+using ApolloShop.Persistence;
+using ApolloShop.Persistence.Seed;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.OpenApi;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddApplication();
+builder.Services.AddPersistence(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "ApolloShop API", Version = "v1" });
+    options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = JwtBearerDefaults.AuthenticationScheme.ToLowerInvariant(),
+        BearerFormat = "JWT",
+        Description = "JWT Authorization header using the Bearer scheme."
+    });
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("bearer", document)] = []
+    });
+});
+
+var frontendOrigin = builder.Configuration.GetSection(FrontendOptions.SectionName).Get<FrontendOptions>()?.Origin
+    ?? "http://localhost:3000";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+        policy.WithOrigins(frontendOrigin)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+});
+
+var app = builder.Build();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseStaticFiles();
+app.UseCors("Frontend");
+app.UseRateLimiter();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await DatabaseSeeder.SeedAsync(db);
+}
+
+app.Run();
+
+public partial class Program;

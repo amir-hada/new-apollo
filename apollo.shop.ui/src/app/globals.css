@@ -1,0 +1,113 @@
+@import "tailwindcss";
+@import "@fontsource-variable/vazirmatn";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "../styles/theme.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Vazirmatn Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Vazirmatn Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  html {
+    @apply overflow-x-hidden font-sans;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply min-h-svh w-full bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+
+  body[data-scroll-locked] {
+    overflow: unset !important;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  @media screen and (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@utility faded-bottom {
+  @apply after:pointer-events-none after:absolute after:inset-s-0 after:bottom-0 after:hidden after:h-32 after:w-full after:rounded-b-2xl after:bg-[linear-gradient(180deg,transparent_10%,var(--background)_70%)] md:after:block;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--primary) 25%, transparent);
+}
+
+.CollapsibleContent {
+  overflow: hidden;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tab-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-enter {
+  animation: page-enter 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-tab-enter {
+  animation: tab-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Fires whenever a tab panel mounts / becomes visible */
+[data-slot="tabs-content"]:not([hidden]) {
+  animation: tab-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-enter,
+  .animate-tab-enter,
+  [data-slot="tabs-content"]:not([hidden]) {
+    animation: none;
+  }
+}

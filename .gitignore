@@ -1,0 +1,41 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies & builds
+**/node_modules/
+**/.next/
+**/out/
+**/dist/
+**/build/
+**/bin/
+**/obj/
+**/.turbo/
+**/.vercel/
+*.tsbuildinfo
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+**/.env.local
+**/.env.development
+**/secrets.json
+**/appsettings.*.local.json
+
+# IDE
+.idea/
+.vs/
+*.user
+*.suo
+*.swp
+
+# Logs & coverage
+*.log
+**/coverage/
+**/TestResults/
+
+# Local media uploads
+apollo.shop.api/src/ApolloShop.Api/wwwroot/media/**
+!apollo.shop.api/src/ApolloShop.Api/wwwroot/media/.gitkeep

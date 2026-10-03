@@ -1,0 +1,61 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: apolloshop-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "ApolloShop_Admin123"
+    ports:
+      - "1433:1433"
+    volumes:
+      - apolloshop_sql_data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ApolloShop_Admin123 -C -Q 'SELECT 1' || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: apolloshop-api
+    ports:
+      - "5080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=ApolloShop;User Id=sa;Password=ApolloShop_Admin123;TrustServerCertificate=True;MultipleActiveResultSets=true"
+      Jwt__Issuer: ApolloShop
+      Jwt__Audience: ApolloShop.Frontend
+      Jwt__Key: "ApolloShop_Docker_Signing_Key_Must_Be_At_Least_32_Chars_Long_2026!"
+      Jwt__AccessTokenMinutes: "60"
+      Jwt__RefreshTokenDays: "14"
+      Frontend__Origin: http://localhost:3000
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  ui:
+    build:
+      context: ../apollo.shop.ui
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5080
+        NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    container_name: apolloshop-ui
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5080
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    depends_on:
+      - api
+
+volumes:
+  apolloshop_sql_data:

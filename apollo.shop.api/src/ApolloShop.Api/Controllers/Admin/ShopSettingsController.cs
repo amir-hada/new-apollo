@@ -25,4 +25,16 @@ public class ShopSettingsController : ControllerBase
         [FromBody] UpdateShopSettingsRequest request,
         CancellationToken cancellationToken) =>
         Ok(await _mediator.Send(new UpdateShopSettingsCommand(request), cancellationToken));
+
+    [HttpPut("hero-banners")]
+    public async Task<ActionResult<ShopSettingsDto>> UpdateHeroBanners(
+        [FromBody] UpdateHeroBannersRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(await _mediator.Send(new UpdateHeroBannersCommand(request), cancellationToken));
+
+    [HttpPut("home-stories")]
+    public async Task<ActionResult<ShopSettingsDto>> UpdateHomeStories(
+        [FromBody] UpdateHomeStoriesRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(await _mediator.Send(new UpdateHomeStoriesCommand(request), cancellationToken));
 }

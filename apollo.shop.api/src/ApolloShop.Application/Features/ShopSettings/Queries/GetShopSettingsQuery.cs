@@ -1,4 +1,5 @@
 using ApolloShop.Application.Abstractions;
+using ApolloShop.Application.Features.ShopSettings;
 using ApolloShop.Application.Features.ShopSettings.DTOs;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -56,5 +57,7 @@ public class GetShopSettingsQueryHandler : IRequestHandler<GetShopSettingsQuery,
         s.Address,
         s.Description,
         s.MetaDescription,
-        s.PrimaryColor);
+        s.PrimaryColor,
+        HeroBannerSerializer.Deserialize(s.HeroBannersJson),
+        HomeStorySerializer.Deserialize(s.HomeStoriesJson));
 }

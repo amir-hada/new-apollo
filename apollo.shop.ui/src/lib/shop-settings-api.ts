@@ -14,7 +14,10 @@ export function useShopSettings() {
   });
 }
 
-export async function uploadShopAsset(file: File, folder: "logo" | "favicon" | "shop" | "avatar") {
+export async function uploadShopAsset(
+  file: File,
+  folder: "logo" | "favicon" | "shop" | "avatar" | "hero" | "story",
+) {
   const form = new FormData();
   form.append("file", file);
   const { data } = await api.post<{ url: string; fileName: string; contentType: string; size: number }>(

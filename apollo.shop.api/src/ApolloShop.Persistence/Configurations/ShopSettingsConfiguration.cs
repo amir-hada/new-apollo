@@ -23,6 +23,8 @@ public class ShopSettingsConfiguration : IEntityTypeConfiguration<ShopSettings>
         builder.Property(x => x.Description).HasMaxLength(2000);
         builder.Property(x => x.MetaDescription).HasMaxLength(500);
         builder.Property(x => x.PrimaryColor).HasMaxLength(20);
+        builder.Property(x => x.HeroBannersJson).HasColumnType("nvarchar(max)");
+        builder.Property(x => x.HomeStoriesJson).HasColumnType("nvarchar(max)");
         builder.Property(x => x.CreatedBy).HasMaxLength(256);
         builder.Property(x => x.UpdatedBy).HasMaxLength(256);
     }

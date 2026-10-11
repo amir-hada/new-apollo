@@ -38,7 +38,9 @@ public class UploadShopAssetCommandHandler : IRequestHandler<UploadShopAssetComm
         "logo",
         "favicon",
         "shop",
-        "avatar"
+        "avatar",
+        "hero",
+        "story"
     };
 
     private const long MaxImageBytes = 5 * 1024 * 1024;

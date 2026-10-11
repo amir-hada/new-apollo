@@ -1096,6 +1096,12 @@ namespace ApolloShop.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<string>("HeroBannersJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HomeStoriesJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("LogoUrl")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");

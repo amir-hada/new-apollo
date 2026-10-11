@@ -32,7 +32,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
       href={`/products/${product.slug}`}
       className={cn(
         "group relative flex h-full flex-col bg-background transition-shadow",
-        /* نوار باریک مشترک با همسایه (مثل دیجی‌کالا) */
+        /* فقط خطوط داخلی بین کارت‌ها؛ لبه چپ/راست بیرونی گرید خالی می‌ماند */
         "border-b border-e border-[#e0e0e2] dark:border-white/10",
         "hover:z-[1] hover:shadow-[0_1px_6px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_2px_10px_rgba(0,0,0,0.3)]",
         className,
@@ -106,7 +106,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
 
 /**
  * شبکه محصول مثل دیجی‌کالا:
- * سفید، بدون پس‌زمینه طوسی در خانه‌های خالی، ۴–۵ ستون در دسکتاپ
+ * بدون ردیوس، بدون بوردر چپ/راست بیرونی؛ فقط خطوط بین کارت‌ها
  */
 export function ProductGrid({
   children,
@@ -118,9 +118,13 @@ export function ProductGrid({
   return (
     <div
       className={cn(
-        "grid w-full gap-0 overflow-hidden rounded-lg bg-background",
-        "border-s border-t border-[#e0e0e2] dark:border-white/10",
-        "grid-cols-2 md:grid-cols-4",
+        "grid w-full gap-0 rounded-none bg-background",
+        "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
+        /* لبهٔ بیرونی (آخرین ستون هر ردیف) بدون خط عمودی */
+        "[&>*:nth-child(2n)]:border-e-0",
+        "sm:[&>*:nth-child(2n)]:border-e sm:[&>*:nth-child(3n)]:border-e-0",
+        "md:[&>*:nth-child(3n)]:border-e md:[&>*:nth-child(4n)]:border-e-0",
+        "lg:[&>*:nth-child(4n)]:border-e lg:[&>*:nth-child(6n)]:border-e-0",
         className,
       )}
     >

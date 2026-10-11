@@ -19,7 +19,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <AuthGuard admin>
       <AdminShell
         fixedMain={useFixedMain}
-        fluidMain={isSettings}
+        fluidMain
         mainClassName={
           isSettings
             ? "flex flex-1 flex-col gap-0 !p-0"

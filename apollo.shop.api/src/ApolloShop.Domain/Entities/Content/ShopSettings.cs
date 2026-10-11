@@ -21,4 +21,10 @@ public class ShopSettings : AuditableEntity
 
     /// <summary>Hex primary brand color, e.g. #0f172a.</summary>
     public string? PrimaryColor { get; set; }
+
+    /// <summary>JSON array of hero banner slides for the storefront homepage.</summary>
+    public string? HeroBannersJson { get; set; }
+
+    /// <summary>JSON array of homepage story circles.</summary>
+    public string? HomeStoriesJson { get; set; }
 }

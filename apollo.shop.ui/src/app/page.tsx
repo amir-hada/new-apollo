@@ -9,9 +9,19 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const products = await serverFetch<PagedResult<ProductListItem>>(
-    "/api/products?page=1&pageSize=8&sort=newest",
-  );
+  const [products, amazing] = await Promise.all([
+    serverFetch<PagedResult<ProductListItem>>(
+      "/api/products?page=1&pageSize=8&sort=newest",
+    ),
+    serverFetch<PagedResult<ProductListItem>>(
+      "/api/products?page=1&pageSize=12&sort=featured",
+    ),
+  ]);
 
-  return <HomeHero products={products?.items ?? []} />;
+  return (
+    <HomeHero
+      products={products?.items ?? []}
+      amazingProducts={amazing?.items ?? []}
+    />
+  );
 }

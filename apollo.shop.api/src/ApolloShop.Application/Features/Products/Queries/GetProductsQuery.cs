@@ -84,10 +84,25 @@ public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, PagedRe
 
         query = (request.Sort?.ToLowerInvariant()) switch
         {
-            "price" => query.OrderBy(p => p.BasePrice),
-            "price_desc" => query.OrderByDescending(p => p.BasePrice),
+            "price" or "price_asc" or "cheapest" => query.OrderBy(p => p.DiscountPrice ?? p.BasePrice),
+            "price_desc" or "expensive" => query.OrderByDescending(p => p.DiscountPrice ?? p.BasePrice),
             "name" => query.OrderBy(p => p.Name),
             "name_desc" => query.OrderByDescending(p => p.Name),
+            "newest" => query.OrderByDescending(p => p.CreatedAtUtc),
+            "most_viewed" => query.OrderByDescending(p => _db.ProductViews.Count(v => v.ProductId == p.Id))
+                .ThenByDescending(p => p.CreatedAtUtc),
+            "best_selling" => query.OrderByDescending(p =>
+                    _db.OrderItems.Where(oi => oi.ProductId == p.Id && PaidStatuses.Contains(oi.Order.Status))
+                        .Sum(oi => (int?)oi.Quantity) ?? 0)
+                .ThenByDescending(p => p.CreatedAtUtc),
+            "featured" => query.OrderByDescending(p => p.DiscountPrice != null)
+                .ThenByDescending(p => p.CreatedAtUtc),
+            "buyer_suggestion" => query.OrderByDescending(p =>
+                    _db.ProductLikes.Count(l => l.ProductId == p.Id))
+                .ThenByDescending(p => p.CreatedAtUtc),
+            "fastest_shipping" => query.OrderByDescending(p => p.IsAvailable)
+                .ThenByDescending(p => p.CreatedAtUtc),
+            // مرتبط‌ترین / پیش‌فرض
             _ => query.OrderByDescending(p => p.CreatedAtUtc)
         };
 

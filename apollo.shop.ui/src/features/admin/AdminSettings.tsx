@@ -5,6 +5,9 @@ import {
   AppWindow,
   Bell,
   CreditCard,
+  Database,
+  CircleDot,
+  Images,
   KeyRound,
   LayoutTemplate,
   Mail,
@@ -21,6 +24,8 @@ import { AppearanceForm } from "@/features/admin/settings/appearance-form";
 import { ApplicationForm } from "@/features/admin/settings/application-form";
 import { DisplayForm } from "@/features/admin/settings/display-form";
 import { EmailForm } from "@/features/admin/settings/email-form";
+import { HeroBannersForm } from "@/features/admin/settings/hero-banners-form";
+import { HomeStoriesForm } from "@/features/admin/settings/home-stories-form";
 import { LogisticsForm } from "@/features/admin/settings/logistics-form";
 import { NotificationsForm } from "@/features/admin/settings/notifications-form";
 import { PaymentForm } from "@/features/admin/settings/payment-form";
@@ -30,6 +35,7 @@ import { RolesForm } from "@/features/admin/settings/roles-form";
 import { SmsForm } from "@/features/admin/settings/sms-form";
 import { StoreForm } from "@/features/admin/settings/store-form";
 import { TemplatesForm } from "@/features/admin/settings/templates-form";
+import { TestDataForm } from "@/features/admin/settings/test-data-form";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -44,6 +50,24 @@ const TABS = [
     title: "فروشگاه",
     desc: "اطلاعات و برندینگ فروشگاه.",
     icon: Store,
+  },
+  {
+    id: "hero-banners",
+    title: "بنرهای هیرو",
+    desc: "مدیریت اسلایدر تصاویر صفحه اصلی.",
+    icon: Images,
+  },
+  {
+    id: "home-stories",
+    title: "استوری‌ها",
+    desc: "دایره‌های استوری زیر بنر صفحه اصلی.",
+    icon: CircleDot,
+  },
+  {
+    id: "test-data",
+    title: "داده‌های تستی",
+    desc: "تولید و پاک‌سازی محصولات، برندها، دسته‌ها و بلاگ نمونه.",
+    icon: Database,
   },
   {
     id: "appearance",
@@ -263,6 +287,9 @@ export function AdminSettings() {
 
           {tab === "profile" && <ProfileForm />}
           {tab === "store" && <StoreForm />}
+          {tab === "hero-banners" && <HeroBannersForm />}
+          {tab === "home-stories" && <HomeStoriesForm />}
+          {tab === "test-data" && <TestDataForm />}
           {tab === "appearance" && <AppearanceForm />}
           {tab === "templates" && <TemplatesForm />}
           {tab === "payment" && <PaymentForm />}

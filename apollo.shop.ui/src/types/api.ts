@@ -576,6 +576,21 @@ export interface VerifyPaymentResult {
   trackingCode?: string | null;
 }
 
+export interface HeroBanner {
+  id: string;
+  imageUrl: string;
+  linkUrl?: string | null;
+  sortOrder: number;
+}
+
+export interface HomeStory {
+  id: string;
+  title: string;
+  imageUrl: string;
+  linkUrl?: string | null;
+  sortOrder: number;
+}
+
 export interface ShopSettings {
   id: string;
   shopTitle: string;
@@ -589,6 +604,8 @@ export interface ShopSettings {
   description?: string | null;
   metaDescription?: string | null;
   primaryColor?: string | null;
+  heroBanners?: HeroBanner[];
+  homeStories?: HomeStory[];
 }
 
 export interface UpdateShopSettingsRequest {

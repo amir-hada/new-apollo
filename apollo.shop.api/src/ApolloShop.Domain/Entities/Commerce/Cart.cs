@@ -2,8 +2,9 @@ using ApolloShop.Domain.Common;
 
 namespace ApolloShop.Domain.Entities.Commerce;
 
-public class Cart : Entity
+public class Cart : Entity, ITenantScoped
 {
+    public Guid TenantId { get; set; }
     public Guid? UserId { get; set; }
     public string? GuestToken { get; set; }
     public DateTime UpdatedAtUtc { get; set; }

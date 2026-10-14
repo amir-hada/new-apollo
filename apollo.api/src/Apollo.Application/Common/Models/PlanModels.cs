@@ -1,3 +1,5 @@
+using Apollo.Domain.Constants;
+
 namespace Apollo.Application.Common.Models;
 
 public sealed record PlanPropertyDto(
@@ -24,7 +26,8 @@ public sealed record AdminPlanListItemDto(
     string BillingPeriod,
     IReadOnlyList<PlanPropertyDto> Properties,
     IReadOnlyList<PlanTemplateDto> Templates,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    PlanProductType ProductType = PlanProductType.Shop);
 
 public sealed record CreatePlanRequest(
     string Name,
@@ -34,7 +37,8 @@ public sealed record CreatePlanRequest(
     long? DiscountedPriceInToman,
     bool IsAvailable,
     bool AllowsInstallment,
-    string BillingPeriod);
+    string BillingPeriod,
+    PlanProductType ProductType = PlanProductType.Shop);
 
 public sealed record UpdatePlanRequest(
     string Name,
@@ -47,7 +51,8 @@ public sealed record UpdatePlanRequest(
     bool IsPublished,
     string BillingPeriod,
     IReadOnlyList<PlanPropertyDto> Properties,
-    IReadOnlyList<PlanTemplateDto> Templates);
+    IReadOnlyList<PlanTemplateDto> Templates,
+    PlanProductType ProductType = PlanProductType.Shop);
 
 public sealed record PublicPlanListItemDto(
     Guid PlanId,
@@ -59,4 +64,5 @@ public sealed record PublicPlanListItemDto(
     bool IsAvailable,
     bool AllowsInstallment,
     string BillingPeriod,
-    IReadOnlyList<PlanPropertyDto> Properties);
+    IReadOnlyList<PlanPropertyDto> Properties,
+    PlanProductType ProductType = PlanProductType.Shop);

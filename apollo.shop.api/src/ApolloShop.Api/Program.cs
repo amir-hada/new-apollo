@@ -1,6 +1,7 @@
 using System.Threading.RateLimiting;
 using ApolloShop.Api.Middleware;
 using ApolloShop.Application;
+using ApolloShop.Application.Abstractions;
 using ApolloShop.Infrastructure;
 using ApolloShop.Infrastructure.Options;
 using ApolloShop.Persistence;
@@ -37,10 +38,16 @@ builder.Services.AddSwaggerGen(options =>
 var frontendOrigin = builder.Configuration.GetSection(FrontendOptions.SectionName).Get<FrontendOptions>()?.Origin
     ?? "http://localhost:3000";
 
+var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { frontendOrigin.TrimEnd('/') };
+foreach (var origin in builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
+{
+    allowedOrigins.Add(origin.TrimEnd('/'));
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
-        policy.WithOrigins(frontendOrigin)
+        policy.SetIsOriginAllowed(origin => IsOriginAllowed(origin, allowedOrigins))
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials());
@@ -72,17 +79,38 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
 
 app.UseStaticFiles();
 app.UseCors("Frontend");
+app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseRateLimiter();
 app.UseAuthentication();
+app.UseMiddleware<TenantClaimValidationMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
 {
+    scope.ServiceProvider.GetRequiredService<ITenantContext>().Bypass();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await DatabaseSeeder.SeedAsync(db);
 }
 
 app.Run();
+
+static bool IsOriginAllowed(string origin, ISet<string> configuredOrigins)
+{
+    if (configuredOrigins.Contains(origin.TrimEnd('/')))
+    {
+        return true;
+    }
+
+    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+    {
+        return false;
+    }
+
+    // Local development: localhost and *.localhost on any port (e.g. shop2.localhost:3000).
+    return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+        || uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase)
+        || uri.Host == "127.0.0.1";
+}
 
 public partial class Program;

@@ -11,8 +11,7 @@ internal static class TestDataCleanup
     {
         var marker = TestDataConstants.CreatedByMarker;
 
-        var products = await db.Products
-            .IgnoreQueryFilters()
+        var products = await db.ProductsIncludingDeleted
             .Include(p => p.Images)
             .Include(p => p.Variants)
             .Include(p => p.Specs)
@@ -46,8 +45,7 @@ internal static class TestDataCleanup
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        var blogPosts = await db.BlogPosts
-            .IgnoreQueryFilters()
+        var blogPosts = await db.BlogPostsIncludingDeleted
             .Include(p => p.PostTags)
             .Where(p => p.CreatedBy == marker)
             .ToListAsync(cancellationToken);

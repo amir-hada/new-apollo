@@ -1,4 +1,5 @@
 import {
+  GlobeIcon,
   HeadphonesIcon,
   LayersIcon,
   LayoutDashboardIcon,
@@ -34,6 +35,12 @@ export const dashboardNavItems: DashboardNavItem[] = [
     description: "مدیریت پلن‌های اشتراک",
   },
   {
+    title: "سایت‌ها",
+    href: "/dashboard/sites",
+    icon: GlobeIcon,
+    description: "سایت‌های ساخته‌شده کاربران",
+  },
+  {
     title: "پشتیبانی",
     href: "/dashboard/support",
     icon: HeadphonesIcon,
@@ -51,6 +58,7 @@ export const dashboardPageTitles: Record<string, string> = {
   "/dashboard": "داشبورد",
   "/dashboard/users": "کاربران",
   "/dashboard/plans": "پلن‌ها",
+  "/dashboard/sites": "سایت‌ها",
   "/dashboard/support": "پشتیبانی",
   "/dashboard/settings": "تنظیمات",
 }

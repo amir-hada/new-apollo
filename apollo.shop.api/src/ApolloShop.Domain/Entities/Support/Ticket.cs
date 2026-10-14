@@ -4,8 +4,9 @@ using ApolloShop.Domain.Enums;
 
 namespace ApolloShop.Domain.Entities.Support;
 
-public class Ticket : AuditableEntity
+public class Ticket : AuditableEntity, ITenantScoped
 {
+    public Guid TenantId { get; set; }
     public string Number { get; set; } = string.Empty;
     public Guid UserId { get; set; }
     public string Subject { get; set; } = string.Empty;

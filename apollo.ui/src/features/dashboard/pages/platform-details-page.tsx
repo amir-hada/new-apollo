@@ -28,6 +28,10 @@ import {
   SettingsAnimatedTabList,
   SettingsTabTrigger,
 } from "@/features/dashboard/components/settings-animated-tab-list"
+import {
+  PlatformSiteActions,
+  ProvisioningStatusBadge,
+} from "@/features/dashboard/components/platform-site-actions"
 import { SettingsTabPanel } from "@/features/dashboard/components/settings-tab-panel"
 import { useAuth } from "@/features/auth"
 import { useAuthenticatedImageUrl } from "@/hooks/use-authenticated-image-url"
@@ -41,6 +45,11 @@ import type {
 } from "@/lib/api/platform-types"
 import { PLATFORM_SETTING_FIELDS } from "@/lib/platform-setting-fields"
 import { dashboardToast } from "@/lib/dashboard-toast"
+import {
+  buildSlugPreview,
+  sanitizeSlugInput,
+  validateSlug,
+} from "@/lib/site-slug"
 import { cn } from "@/lib/utils"
 
 const platformTabs: {
@@ -303,10 +312,12 @@ type SettingsDraft = {
   adminUsername: string
   adminPassword: string
   templateCode: string
+  slug: string
 }
 
 function toDraft(settings: PlatformSettings): SettingsDraft {
   return {
+    slug: settings.slug ?? "",
     websiteName: settings.websiteName,
     websiteLogoFileId: settings.websiteLogoFileId,
     websiteLogoUrl: settings.websiteLogoUrl,
@@ -320,11 +331,13 @@ function toDraft(settings: PlatformSettings): SettingsDraft {
 function PlatformSettingsTab({
   platformId,
   settings,
+  slugLocked,
   availableTemplates,
   onSaved,
 }: {
   platformId: string
   settings: PlatformSettings
+  slugLocked: boolean
   availableTemplates: PlatformTemplateOption[]
   onSaved: (detail: UserPlatformDetail) => void
 }) {
@@ -338,6 +351,13 @@ function PlatformSettingsTab({
   }, [settings])
 
   async function handleSave() {
+    if (!slugLocked) {
+      const slugError = validateSlug(draft.slug)
+      if (slugError) {
+        setError(slugError)
+        return
+      }
+    }
     if (!draft.websiteName.trim()) {
       setError(`مقدار «${PLATFORM_SETTING_FIELDS.websiteName.label}» الزامی است.`)
       return
@@ -372,6 +392,7 @@ function PlatformSettingsTab({
         adminUsername: draft.adminUsername.trim(),
         adminPassword: draft.adminPassword.trim(),
         templateCode: draft.templateCode.trim(),
+        ...(slugLocked ? {} : { slug: draft.slug.trim() }),
       })
       onSaved(detail)
       dashboardToast.success("تنظیمات ذخیره شد.")
@@ -387,6 +408,32 @@ function PlatformSettingsTab({
   return (
     <div className="space-y-5">
       <div className="space-y-4">
+        <FormFloatingField
+          id="platform-setting-slug"
+          label="آدرس سایت (slug)"
+          required
+          dir="ltr"
+          className="text-start"
+          autoComplete="off"
+          value={draft.slug}
+          disabled={isSaving || slugLocked}
+          onChange={(event) =>
+            setDraft((current) => ({
+              ...current,
+              slug: sanitizeSlugInput(event.target.value),
+            }))
+          }
+          footer={
+            <p
+              dir="ltr"
+              className="px-1 text-start text-[11px] font-light text-muted-foreground"
+            >
+              {buildSlugPreview(draft.slug)}
+              {slugLocked ? " — پس از آماده شدن سایت قابل تغییر نیست" : ""}
+            </p>
+          }
+        />
+
         <FormFloatingField
           id="platform-setting-website-name"
           label={PLATFORM_SETTING_FIELDS.websiteName.label}
@@ -501,6 +548,15 @@ export function PlatformDetailsPage() {
     platformTabs[0].value
   )
 
+  const reloadPlatform = React.useCallback(async () => {
+    if (!platformId) return
+    try {
+      setPlatform(await platformsApi.getPlatform(platformId))
+    } catch {
+      // keep current state; user can refresh manually
+    }
+  }, [platformId])
+
   React.useEffect(() => {
     let cancelled = false
 
@@ -582,7 +638,28 @@ export function PlatformDetailsPage() {
           <h2 className="font-heading text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
             {platform.name}
           </h2>
+
+          <div className="flex flex-wrap items-center gap-2 text-xs font-light text-muted-foreground">
+            <ProvisioningStatusBadge status={platform.provisioningStatus} />
+            {platform.tenantSlug ? (
+              <span dir="ltr">{platform.tenantSlug}</span>
+            ) : null}
+          </div>
+
+          {platform.provisioningStatus === "Failed" &&
+          platform.provisioningError ? (
+            <p className="text-xs font-light text-destructive" role="alert">
+              {platform.provisioningError}
+            </p>
+          ) : null}
         </div>
+
+        <PlatformSiteActions
+          platformId={platform.platformId}
+          status={platform.provisioningStatus}
+          storefrontUrl={platform.storefrontUrl}
+          onChanged={() => void reloadPlatform()}
+        />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-8">
@@ -605,6 +682,9 @@ export function PlatformDetailsPage() {
             <PlatformSettingsTab
               platformId={platform.platformId}
               settings={platform.settings}
+              slugLocked={
+                platform.provisioningStatus === "Ready" || platform.tenantId !== null
+              }
               availableTemplates={platform.availableTemplates}
               onSaved={setPlatform}
             />

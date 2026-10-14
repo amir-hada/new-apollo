@@ -1,10 +1,12 @@
 using Apollo.Application.Abstractions.Plans;
 using Apollo.Application.Common.Models;
+using Apollo.Domain.Constants;
 using MediatR;
 
 namespace Apollo.Application.Features.Plans.Queries.GetPublicPlans;
 
-public sealed record GetPublicPlansQuery : IRequest<IReadOnlyList<PublicPlanListItemDto>>;
+public sealed record GetPublicPlansQuery(PlanProductType? ProductType = null)
+    : IRequest<IReadOnlyList<PublicPlanListItemDto>>;
 
 public sealed class GetPublicPlansQueryHandler
     : IRequestHandler<GetPublicPlansQuery, IReadOnlyList<PublicPlanListItemDto>>
@@ -19,5 +21,5 @@ public sealed class GetPublicPlansQueryHandler
     public Task<IReadOnlyList<PublicPlanListItemDto>> Handle(
         GetPublicPlansQuery request,
         CancellationToken cancellationToken) =>
-        _planCatalogService.GetPublicPlansAsync(cancellationToken);
+        _planCatalogService.GetPublicPlansAsync(request.ProductType, cancellationToken);
 }

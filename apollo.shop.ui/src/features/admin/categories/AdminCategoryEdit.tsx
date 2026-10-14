@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { toPersianDigits } from "@/features/auth/normalize-phone";
 import { api, getApiErrorMessage } from "@/lib/api";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { formatPrice } from "@/lib/utils";
 import type {
   Category,
@@ -368,18 +369,12 @@ export function AdminCategoryEdit() {
                       className="flex flex-col overflow-hidden rounded-xl border border-border bg-card"
                     >
                       <div className="relative aspect-[4/3] bg-muted">
-                        {product.primaryImageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={product.primaryImageUrl}
-                            alt=""
-                            className="size-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex size-full items-center justify-center">
-                            <Package className="size-8 text-muted-foreground/50" />
-                          </div>
-                        )}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={resolveProductImageUrl(product.primaryImageUrl)}
+                          alt=""
+                          className="size-full object-cover"
+                        />
                         <Badge
                           variant={badge.variant}
                           className="absolute start-2 top-2"

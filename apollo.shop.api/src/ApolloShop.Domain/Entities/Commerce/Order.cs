@@ -4,8 +4,9 @@ using ApolloShop.Domain.Enums;
 
 namespace ApolloShop.Domain.Entities.Commerce;
 
-public class Order : AuditableEntity
+public class Order : AuditableEntity, ITenantScoped
 {
+    public Guid TenantId { get; set; }
     public string OrderNumber { get; set; } = string.Empty;
     public Guid UserId { get; set; }
     public OrderStatus Status { get; set; } = OrderStatus.Pending;

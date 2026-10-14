@@ -53,6 +53,10 @@ public sealed class ExceptionHandlingMiddleware
                 HttpStatusCode.Forbidden,
                 "عدم دسترسی",
                 null),
+            ShopProvisioningException => (
+                HttpStatusCode.BadGateway,
+                "خطا در ارتباط با سرویس فروشگاه",
+                null),
             _ => (
                 HttpStatusCode.InternalServerError,
                 "خطای سرور",

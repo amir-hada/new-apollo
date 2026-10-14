@@ -43,6 +43,14 @@ public sealed class ConflictException : ApplicationException
     }
 }
 
+public sealed class ShopProvisioningException : ApplicationException
+{
+    public ShopProvisioningException(string message)
+        : base(message)
+    {
+    }
+}
+
 public sealed class ForbiddenException : ApplicationException
 {
     public ForbiddenException(string message)

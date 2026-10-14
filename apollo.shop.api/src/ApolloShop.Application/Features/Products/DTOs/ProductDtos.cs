@@ -37,6 +37,8 @@ public record ProductListItemDto(
     string? CategoryName,
     string? PrimaryImageUrl,
     int StockQuantity,
+    double? AverageRating = null,
+    int RatingCount = 0,
     int TotalSales = 0,
     decimal TotalRevenue = 0,
     IReadOnlyList<decimal>? RevenueTrend = null);
@@ -57,8 +59,10 @@ public record ProductDetailDto(
     string Description,
     Guid? BrandId,
     string? BrandName,
+    string? BrandSlug,
     Guid? CategoryId,
     string? CategoryName,
+    string? CategorySlug,
     bool IsAvailable,
     ProductStatus Status,
     string ProductCode,
@@ -86,7 +90,10 @@ public record ProductDetailDto(
     IReadOnlyList<ProductImageDto> Images,
     IReadOnlyList<ProductSpecDto> Specs,
     /// <summary>Read-only default variant(s) for cart compatibility.</summary>
-    IReadOnlyList<ProductVariantDto> Variants);
+    IReadOnlyList<ProductVariantDto> Variants,
+    double? AverageRating = null,
+    int RatingCount = 0,
+    int CommentCount = 0);
 
 public record UpsertProductImageRequest(
     Guid? Id,

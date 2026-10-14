@@ -1,6 +1,9 @@
 using Apollo.Application.Common.Exceptions;
 using Apollo.Application.Common.Models;
+using Apollo.Application.Features.Platforms.Commands.CreateShopSso;
 using Apollo.Application.Features.Platforms.Commands.CreateUserPlatform;
+using Apollo.Application.Features.Platforms.Commands.RetryProvisioning;
+using Apollo.Domain.Constants;
 using Apollo.Application.Features.Platforms.Commands.DeleteUserPlatform;
 using Apollo.Application.Features.Platforms.Commands.UpdatePlatformSettings;
 using Apollo.Application.Features.Platforms.Queries.GetPlanOptions;
@@ -48,9 +51,11 @@ public sealed class PlatformsController : ControllerBase
     }
 
     [HttpGet("plan-options")]
-    public async Task<IActionResult> GetPlanOptions(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetPlanOptions(
+        [FromQuery] PlanProductType? productType,
+        CancellationToken cancellationToken)
     {
-        var plans = await _sender.Send(new GetPlanOptionsQuery(), cancellationToken);
+        var plans = await _sender.Send(new GetPlanOptionsQuery(productType), cancellationToken);
         return Ok(plans);
     }
 
@@ -77,6 +82,30 @@ public sealed class PlatformsController : ControllerBase
             cancellationToken);
 
         return Ok(platform);
+    }
+
+    [HttpPost("{platformId:guid}/retry-provisioning")]
+    public async Task<IActionResult> RetryProvisioning(
+        Guid platformId,
+        CancellationToken cancellationToken)
+    {
+        var platform = await _sender.Send(
+            new RetryPlatformProvisioningCommand(GetUserId(), platformId),
+            cancellationToken);
+
+        return Ok(platform);
+    }
+
+    [HttpPost("{platformId:guid}/shop-sso")]
+    public async Task<IActionResult> CreateShopSso(
+        Guid platformId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(
+            new CreateShopSsoCommand(GetUserId(), platformId),
+            cancellationToken);
+
+        return Ok(result);
     }
 
     [HttpDelete("{platformId:guid}")]

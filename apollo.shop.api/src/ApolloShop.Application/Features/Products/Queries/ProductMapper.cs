@@ -32,7 +32,29 @@ internal static class ProductMapper
         return await query.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
 
-    public static ProductDetailDto ToDetail(Product p) =>
+    public static async Task<ProductDetailDto> ToDetailAsync(
+        IApplicationDbContext db,
+        Product p,
+        CancellationToken cancellationToken)
+    {
+        var approved = db.ProductComments.AsNoTracking()
+            .Where(c => c.ProductId == p.Id && c.IsApproved);
+
+        var commentCount = await approved.CountAsync(cancellationToken);
+        var rated = approved.Where(c => c.Rating != null);
+        var ratingCount = await rated.CountAsync(cancellationToken);
+        double? averageRating = ratingCount > 0
+            ? await rated.AverageAsync(c => (double)c.Rating!, cancellationToken)
+            : null;
+
+        return ToDetail(p, averageRating, ratingCount, commentCount);
+    }
+
+    public static ProductDetailDto ToDetail(
+        Product p,
+        double? averageRating = null,
+        int ratingCount = 0,
+        int commentCount = 0) =>
         new(
             p.Id,
             p.Name,
@@ -40,8 +62,10 @@ internal static class ProductMapper
             p.Description,
             p.BrandId,
             p.Brand?.Name,
+            p.Brand?.Slug,
             p.CategoryId,
             p.Category?.Name,
+            p.Category?.Slug,
             p.IsAvailable,
             p.Status,
             p.ProductCode,
@@ -82,5 +106,8 @@ internal static class ProductMapper
             p.Variants
                 .Select(v => new ProductVariantDto(
                     v.Id, v.Sku, v.Name, v.Price, v.CompareAtPrice, v.StockQuantity, v.IsActive))
-                .ToList());
+                .ToList(),
+            averageRating,
+            ratingCount,
+            commentCount);
 }

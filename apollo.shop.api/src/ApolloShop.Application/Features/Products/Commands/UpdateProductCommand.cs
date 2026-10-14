@@ -31,14 +31,14 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
         {
             throw new ValidationException("Slug", "Product slug is required.");
         }
-        if (await _db.Products.IgnoreQueryFilters().AnyAsync(p => p.Slug == slug && p.Id != product.Id, cancellationToken))
+        if (await _db.ProductsIncludingDeleted.AnyAsync(p => p.Slug == slug && p.Id != product.Id, cancellationToken))
         {
             throw new ConflictException("Product slug already exists.");
         }
 
         var sku = string.IsNullOrWhiteSpace(r.Sku) ? null : r.Sku.Trim();
         if (sku is not null
-            && await _db.Products.IgnoreQueryFilters()
+            && await _db.ProductsIncludingDeleted
                 .AnyAsync(p => p.Sku == sku && p.Id != product.Id, cancellationToken))
         {
             throw new ConflictException("Product SKU already exists.");

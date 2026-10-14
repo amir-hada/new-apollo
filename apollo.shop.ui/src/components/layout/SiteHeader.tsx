@@ -14,10 +14,8 @@ import {
   Home,
   Laptop,
   LayoutGrid,
-  LogOut,
   Menu,
   Package,
-  Search,
   ShoppingBag,
   ShoppingCart,
   Smartphone,
@@ -27,9 +25,10 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { NavbarSearch } from "@/features/search/NavbarSearch";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { useCartStore } from "@/lib/cart-store";
@@ -72,7 +71,6 @@ export function SiteHeader() {
   const [catsOpen, setCatsOpen] = useState(false);
   const [activeCatId, setActiveCatId] = useState<string | null>(null);
   const [mobileCatsOpen, setMobileCatsOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const catsRef = useRef<HTMLDivElement | null>(null);
   const megaMenuRef = useRef<HTMLDivElement | null>(null);
   const catsCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,8 +81,15 @@ export function SiteHeader() {
   const [navClusterWidth, setNavClusterWidth] = useState<number | null>(null);
 
   const user = useAuthStore((s) => s.user);
+  const hydrated = useAuthStore((s) => s.hydrated);
   const clearSession = useAuthStore((s) => s.clearSession);
   const isAdmin = useAuthStore((s) => s.isAdmin);
+
+  const displayName =
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
+    user?.phoneNumber ||
+    user?.email?.split("@")[0] ||
+    "حساب من";
   const cart = useCartStore((s) => s.cart);
   const setCart = useCartStore((s) => s.setCart);
   const { settings } = useSiteSettings();
@@ -189,13 +194,6 @@ export function SiteHeader() {
     return () => ro.disconnect();
   }, [nav.showCategories, categories.length]);
 
-  function submitSearch(e?: FormEvent) {
-    e?.preventDefault();
-    const q = query.trim();
-    router.push(q ? `/products?search=${encodeURIComponent(q)}` : "/products");
-    setMobileOpen(false);
-  }
-
   const itemCount = cart?.itemCount ?? 0;
 
   const logoBlock = (
@@ -217,69 +215,41 @@ export function SiteHeader() {
   );
 
   const searchForm = nav.showSearch ? (
-    <form
-      onSubmit={submitSearch}
-      className="relative min-w-0"
+    <NavbarSearch
       style={searchWidth ? { width: searchWidth } : { width: "28rem" }}
-    >
-      <Search className="pointer-events-none absolute start-3.5 top-1/2 size-5 -translate-y-1/2 text-[#81858b]" />
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="محصول، برند یا دسته مورد نظرتان را جستجو کنید"
-        className="h-12 w-full rounded-md border-0 bg-[#f0f0f1] pe-4 ps-11 text-[13px] text-foreground outline-none transition placeholder:text-[#a1a3a8] focus:bg-[#e8e8ea] focus:ring-2 focus:ring-primary/20 dark:bg-muted dark:focus:bg-muted"
-      />
-    </form>
+    />
   ) : null;
+
+  const accountButton = !hydrated ? (
+    <div
+      className="h-11 w-[7.5rem] shrink-0 animate-pulse rounded-md bg-[#f0f0f1] dark:bg-muted"
+      aria-hidden
+    />
+  ) : user ? (
+    <button
+      type="button"
+      onClick={() => router.push("/account")}
+      className="inline-flex h-11 max-w-[11rem] items-center gap-2 rounded-md border border-[#e0e0e2] bg-background px-3 text-[13px] font-medium text-[#3f4064] transition hover:bg-muted dark:border-white/10 dark:text-foreground"
+      title={displayName}
+    >
+      <User className="size-4 shrink-0" strokeWidth={1.75} />
+      <span className="truncate">{displayName}</span>
+    </button>
+  ) : (
+    <Link
+      href="/login"
+      className="inline-flex h-11 items-center rounded-md border border-[#e0e0e2] bg-background px-3.5 text-[13px] font-medium text-[#3f4064] transition hover:bg-muted dark:border-white/10 dark:text-foreground"
+    >
+      ورود
+      <span className="mx-1.5 text-[#a1a3a8]">|</span>
+      ثبت نام
+    </Link>
+  );
 
   const actionsBlock = (
     <div className="flex shrink-0 items-center gap-2">
       <ThemeToggle />
-
-      {user ? (
-        <div className="hidden items-center gap-2 sm:flex">
-          <button
-            type="button"
-            onClick={() => router.push("/account")}
-            className="inline-flex h-11 items-center gap-2 rounded-md border border-[#e0e0e2] bg-background px-3 text-[13px] font-medium text-[#3f4064] transition hover:bg-muted dark:border-white/10 dark:text-foreground"
-          >
-            <User className="size-4" />
-            <span className="max-w-[7rem] truncate">
-              {user.firstName || "حساب من"}
-            </span>
-          </button>
-          {isAdmin() && (
-            <button
-              type="button"
-              onClick={() => router.push("/admin")}
-              className="inline-flex h-11 items-center rounded-md border border-[#e0e0e2] px-3 text-xs font-bold text-[#3f4064] dark:border-white/10 dark:text-foreground"
-            >
-              ادمین
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              clearSession();
-              router.push("/");
-            }}
-            className="inline-flex size-11 items-center justify-center rounded-md border border-[#e0e0e2] text-[#81858b] transition hover:bg-muted dark:border-white/10"
-            aria-label="خروج"
-            title="خروج"
-          >
-            <LogOut className="size-4" />
-          </button>
-        </div>
-      ) : (
-        <Link
-          href="/login"
-          className="hidden h-11 items-center rounded-md border border-[#e0e0e2] bg-background px-3.5 text-[13px] font-medium text-[#3f4064] transition hover:bg-muted sm:inline-flex dark:border-white/10 dark:text-foreground"
-        >
-          ورود
-          <span className="mx-1.5 text-[#a1a3a8]">|</span>
-          ثبت نام
-        </Link>
-      )}
+      {accountButton}
 
       {nav.showCart ? (
         <Link
@@ -536,15 +506,9 @@ export function SiteHeader() {
       {mobileOpen ? (
         <div className="border-t border-[#e0e0e2] bg-background px-3 py-4 lg:hidden dark:border-white/10">
           {nav.showSearch ? (
-            <form onSubmit={submitSearch} className="relative mb-4">
-              <Search className="pointer-events-none absolute start-3.5 top-1/2 size-5 -translate-y-1/2 text-[#81858b]" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="محصول، برند یا دسته مورد نظرتان را جستجو کنید"
-                className="h-12 w-full rounded-md border-0 bg-[#f0f0f1] pe-4 ps-11 text-[13px] outline-none focus:ring-2 focus:ring-primary/20 dark:bg-muted"
-              />
-            </form>
+            <div className="mb-4">
+              <NavbarSearch onNavigate={() => setMobileOpen(false)} />
+            </div>
           ) : null}
 
           <button
@@ -611,21 +575,22 @@ export function SiteHeader() {
               <>
                 <Link
                   href="/account"
-                  className="rounded-lg px-3 py-2.5 text-sm hover:bg-muted"
+                  className="inline-flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium hover:bg-muted"
                 >
-                  حساب کاربری
+                  <User className="size-4 shrink-0 text-[#81858b]" />
+                  {displayName}
                 </Link>
-                {isAdmin() && (
+                {isAdmin() ? (
                   <Link
                     href="/admin"
-                    className="rounded-lg px-3 py-2.5 text-sm hover:bg-muted"
+                    className="rounded-md px-3 py-2.5 text-sm hover:bg-muted"
                   >
                     پنل ادمین
                   </Link>
-                )}
+                ) : null}
                 <button
                   type="button"
-                  className="rounded-lg px-3 py-2.5 text-start text-sm text-destructive hover:bg-muted"
+                  className="rounded-md px-3 py-2.5 text-start text-sm text-destructive hover:bg-muted"
                   onClick={() => {
                     clearSession();
                     router.push("/");
@@ -637,8 +602,9 @@ export function SiteHeader() {
             ) : (
               <Link
                 href="/login"
-                className="mt-1 rounded-xl border border-[#e0e0e2] px-3 py-2.5 text-center text-sm font-medium dark:border-white/10"
+                className="mt-1 inline-flex items-center justify-center gap-2 rounded-md border border-[#e0e0e2] px-3 py-2.5 text-sm font-medium dark:border-white/10"
               >
+                <User className="size-4 text-[#81858b]" />
                 ورود | ثبت نام
               </Link>
             )}

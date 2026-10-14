@@ -11,11 +11,18 @@ public record SetUserRolesCommand(Guid UserId, IReadOnlyList<string> Roles) : IR
 public class SetUserRolesCommandHandler : IRequestHandler<SetUserRolesCommand>
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICurrentUser _currentUser;
 
-    public SetUserRolesCommandHandler(IApplicationDbContext db) => _db = db;
+    public SetUserRolesCommandHandler(IApplicationDbContext db, ICurrentUser currentUser)
+    {
+        _db = db;
+        _currentUser = currentUser;
+    }
 
     public async Task Handle(SetUserRolesCommand request, CancellationToken cancellationToken)
     {
+        EnsureCanAssign(request.Roles, _currentUser);
+
         var user = await _db.Users
             .Include(u => u.UserRoles)
             .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken)
@@ -37,5 +44,14 @@ public class SetUserRolesCommandHandler : IRequestHandler<SetUserRolesCommand>
         }
 
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    internal static void EnsureCanAssign(IEnumerable<string> roles, ICurrentUser currentUser)
+    {
+        if (roles.Any(r => string.Equals(r?.Trim(), WellKnownRoles.PlatformAdmin, StringComparison.OrdinalIgnoreCase))
+            && !currentUser.IsInRole(WellKnownRoles.PlatformAdmin))
+        {
+            throw new ApolloShop.Domain.Exceptions.ValidationException("Roles", "Only a platform admin can assign the PlatformAdmin role.");
+        }
     }
 }

@@ -4,8 +4,9 @@ using ApolloShop.Domain.Enums;
 
 namespace ApolloShop.Domain.Entities.Content;
 
-public class BlogPost : AuditableEntity, ISoftDeletable
+public class BlogPost : AuditableEntity, ISoftDeletable, ITenantScoped
 {
+    public Guid TenantId { get; set; }
     public string Slug { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;

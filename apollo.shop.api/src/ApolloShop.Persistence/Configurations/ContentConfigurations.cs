@@ -18,7 +18,7 @@ public class BlogCategoryConfiguration : IEntityTypeConfiguration<BlogCategory>
         builder.Property(x => x.CreatedBy).HasMaxLength(256);
         builder.Property(x => x.UpdatedBy).HasMaxLength(256);
 
-        builder.HasIndex(x => x.Slug).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.Slug }).IsUnique();
     }
 }
 
@@ -33,7 +33,7 @@ public class BlogTagConfiguration : IEntityTypeConfiguration<BlogTag>
         builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
         builder.Property(x => x.Slug).HasMaxLength(100).IsRequired();
 
-        builder.HasIndex(x => x.Slug).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.Slug }).IsUnique();
     }
 }
 
@@ -56,7 +56,7 @@ public class BlogPostConfiguration : IEntityTypeConfiguration<BlogPost>
         builder.Property(x => x.UpdatedBy).HasMaxLength(256);
         builder.Property(x => x.DeletedBy).HasMaxLength(256);
 
-        builder.HasIndex(x => x.Slug).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.Slug }).IsUnique();
 
         builder.HasOne(x => x.Author)
             .WithMany()

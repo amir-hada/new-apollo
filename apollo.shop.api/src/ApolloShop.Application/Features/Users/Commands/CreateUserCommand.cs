@@ -14,9 +14,11 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, UserD
     private readonly IApplicationDbContext _db;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IDateTimeProvider _clock;
+    private readonly ICurrentUser _currentUser;
 
-    public CreateUserCommandHandler(IApplicationDbContext db, IPasswordHasher passwordHasher, IDateTimeProvider clock)
+    public CreateUserCommandHandler(IApplicationDbContext db, IPasswordHasher passwordHasher, IDateTimeProvider clock, ICurrentUser currentUser)
     {
+        _currentUser = currentUser;
         _db = db;
         _passwordHasher = passwordHasher;
         _clock = clock;
@@ -39,6 +41,8 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, UserD
         var roles = await _db.Roles
             .Where(r => roleNames.Contains(r.Name))
             .ToListAsync(cancellationToken);
+
+        SetUserRolesCommandHandler.EnsureCanAssign(roleNames, _currentUser);
 
         if (roles.Count != roleNames.Count)
         {

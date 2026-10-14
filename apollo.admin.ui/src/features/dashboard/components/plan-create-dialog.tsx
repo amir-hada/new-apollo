@@ -19,7 +19,12 @@ import { PlanImageUploadField } from "@/features/dashboard/components/plan-image
 import { adminApi } from "@/lib/api/admin-api"
 import { ApiError } from "@/lib/api/client"
 import { uploadPlanImage } from "@/lib/api/files-api"
-import type { CreatePlanRequest, PlanBillingPeriod } from "@/lib/api/plan-types"
+import {
+  PLAN_PRODUCT_TYPE_LABELS,
+  type CreatePlanRequest,
+  type PlanBillingPeriod,
+  type PlanProductType,
+} from "@/lib/api/plan-types"
 import { dashboardToast } from "@/lib/dashboard-toast"
 import { parseNumericInput } from "@/lib/persian/digits"
 import { formatTomanInWords } from "@/lib/persian/toman-words"
@@ -72,6 +77,10 @@ const installmentOptions: { value: InstallmentValue; label: string }[] = [
   { value: "no", label: "ندارد" },
 ]
 
+const productTypeOptions: { value: PlanProductType; label: string }[] = [
+  { value: "Shop", label: PLAN_PRODUCT_TYPE_LABELS.Shop },
+]
+
 const billingPeriodOptions: { value: PlanBillingPeriod; label: string }[] = [
   { value: "Monthly", label: "ماهانه" },
   { value: "Yearly", label: "سالانه" },
@@ -110,6 +119,7 @@ export function PlanCreateDialog({
   )
   const [billingPeriod, setBillingPeriod] =
     React.useState<PlanBillingPeriod | null>(null)
+  const [productType, setProductType] = React.useState<PlanProductType>("Shop")
   const [selectedImage, setSelectedImage] = React.useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
@@ -124,6 +134,7 @@ export function PlanCreateDialog({
     setAvailability(null)
     setInstallment(null)
     setBillingPeriod(null)
+    setProductType("Shop")
     setSelectedImage(null)
     setFormError(null)
     setFieldErrors({})
@@ -239,6 +250,7 @@ export function PlanCreateDialog({
 
       const payload: CreatePlanRequest = {
         name: name.trim(),
+        productType,
         imageFileId,
         description: description.trim(),
         priceInToman: parsePrice(price)!,
@@ -402,6 +414,17 @@ export function PlanCreateDialog({
                   disabled={isSubmitting}
                   error={fieldErrors.discountedPrice}
                   footer={<PriceHint value={discountedPrice} />}
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <FormSelectDropdown
+                  value={productType}
+                  options={productTypeOptions}
+                  onChange={setProductType}
+                  label="نوع محصول"
+                  disabled={isSubmitting}
+                  ariaLabel="نوع محصول پلن"
                 />
               </div>
 

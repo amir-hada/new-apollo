@@ -2,11 +2,13 @@ import { sanitizeProtectedFileUrl } from "@/lib/resolve-display-image-url"
 
 import { apiRequest } from "./client"
 import type { AdminUserListItem } from "./auth-types"
-import type {
-  AdminPlanListItem,
-  CreatePlanRequest,
-  UpdatePlanRequest,
+import {
+  normalizePlanProductType,
+  type AdminPlanListItem,
+  type CreatePlanRequest,
+  type UpdatePlanRequest,
 } from "./plan-types"
+import type { AdminSiteListItem } from "./site-types"
 
 function normalizeAdminUser(user: AdminUserListItem): AdminUserListItem {
   return {
@@ -19,6 +21,7 @@ function normalizeAdminUser(user: AdminUserListItem): AdminUserListItem {
 function normalizePlan(plan: AdminPlanListItem): AdminPlanListItem {
   return {
     ...plan,
+    productType: normalizePlanProductType(plan.productType),
     imageUrl: sanitizeProtectedFileUrl(plan.imageUrl),
     imageFileId: plan.imageFileId ?? null,
     isPublished: plan.isPublished ?? false,
@@ -54,6 +57,17 @@ export const adminApi = {
       method: "DELETE",
       auth: true,
     })
+  },
+
+  async getSites() {
+    const sites = await apiRequest<AdminSiteListItem[]>("/api/admin/sites", {
+      auth: true,
+    })
+
+    return sites.map((site) => ({
+      ...site,
+      productType: normalizePlanProductType(site.productType),
+    }))
   },
 
   async getPlans() {

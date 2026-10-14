@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { toPersianDigits } from "@/features/auth/normalize-phone";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { getProductDisplayPrices } from "@/lib/product-price";
 import {
   getActiveShopCurrency,
@@ -39,19 +40,13 @@ export function ProductCard({ product, className }: ProductCardProps) {
       )}
     >
       <div className="relative aspect-square overflow-hidden bg-background">
-        {product.primaryImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={product.primaryImageUrl}
-            alt={product.name}
-            className="size-full object-contain p-2 transition duration-300 group-hover:scale-[1.02] sm:p-3"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
-            بدون تصویر
-          </div>
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={resolveProductImageUrl(product.primaryImageUrl)}
+          alt={product.name}
+          className="size-full object-contain p-2 transition duration-300 group-hover:scale-[1.02] sm:p-3"
+          loading="lazy"
+        />
 
         {unavailable ? (
           <span className="absolute start-2 top-2 rounded bg-foreground/80 px-1.5 py-0.5 text-[10px] font-medium text-background backdrop-blur-sm">
@@ -60,18 +55,16 @@ export function ProductCard({ product, className }: ProductCardProps) {
         ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col gap-1.5 px-2.5 pb-3 pt-1.5 sm:px-3 sm:pb-3.5">
-        <h3 className="line-clamp-2 min-h-[2.5rem] text-[12px] leading-5 text-foreground/90 sm:min-h-[2.75rem] sm:text-[13px] sm:leading-[1.4]">
+      <div className="flex flex-1 flex-col gap-0.5 px-2.5 pb-3 pt-1.5 sm:px-3 sm:pb-3.5">
+        <h3 className="line-clamp-2 text-[12px] font-semibold leading-5 text-foreground sm:text-[13px] sm:leading-[1.35]">
           {product.name}
         </h3>
 
         {product.brandName ? (
-          <p className="truncate text-[10px] text-muted-foreground sm:text-[11px]">
+          <p className="truncate text-[10px] leading-tight text-muted-foreground sm:text-[11px]">
             {product.brandName}
           </p>
-        ) : (
-          <span className="h-3.5 sm:h-4" aria-hidden />
-        )}
+        ) : null}
 
         <div className="mt-auto space-y-0.5 pt-1">
           {discountPercent != null && original != null ? (

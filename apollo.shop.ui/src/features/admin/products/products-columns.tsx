@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import type { LegacyColumnDef } from "@tanstack/react-table/legacy";
-import { Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableColumnHeader } from "@/components/data-table";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { formatPrice } from "@/lib/utils";
 import { toPersianDigits } from "@/features/auth/normalize-phone";
 import type { ProductRow } from "./data";
@@ -54,16 +54,12 @@ export function createProductsColumns(
         return (
           <div className="flex justify-center">
             <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/40">
-              {product.primaryImageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={product.primaryImageUrl}
-                  alt=""
-                  className="size-full object-cover"
-                />
-              ) : (
-                <Package className="size-4 text-muted-foreground" />
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={resolveProductImageUrl(product.primaryImageUrl)}
+                alt=""
+                className="size-full object-cover"
+              />
             </div>
           </div>
         );

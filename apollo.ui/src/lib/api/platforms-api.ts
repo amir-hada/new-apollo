@@ -5,6 +5,7 @@ import type {
   CreateUserPlatformRequest,
   PlanOption,
   PlatformSettings,
+  ShopSsoRedirect,
   UpdatePlatformSettingsRequest,
   UserPlatformDetail,
   UserPlatformListItem,
@@ -25,12 +26,33 @@ function normalizeSettings(settings: PlatformSettings | null | undefined): Platf
     adminUsername: settings?.adminUsername ?? "",
     adminPassword: settings?.adminPassword ?? "",
     templateCode: settings?.templateCode ?? "",
+    slug: settings?.slug ?? null,
+  }
+}
+
+function normalizeListItem(item: UserPlatformListItem): UserPlatformListItem {
+  return {
+    ...item,
+    productType: item.productType ?? "Shop",
+    tenantId: item.tenantId ?? null,
+    tenantSlug: item.tenantSlug ?? null,
+    storefrontUrl: item.storefrontUrl ?? null,
+    adminUrl: item.adminUrl ?? null,
+    provisioningStatus: item.provisioningStatus ?? "Pending",
+    provisioningError: item.provisioningError ?? null,
   }
 }
 
 function normalizePlatformDetail(detail: UserPlatformDetail): UserPlatformDetail {
   return {
     ...detail,
+    productType: detail.productType ?? "Shop",
+    tenantId: detail.tenantId ?? null,
+    tenantSlug: detail.tenantSlug ?? detail.settings?.slug ?? null,
+    storefrontUrl: detail.storefrontUrl ?? null,
+    adminUrl: detail.adminUrl ?? null,
+    provisioningStatus: detail.provisioningStatus ?? "Pending",
+    provisioningError: detail.provisioningError ?? null,
     settings: normalizeSettings(detail.settings),
     availableTemplates: (detail.availableTemplates ?? []).map((template) => ({
       code: template.code ?? "",
@@ -42,9 +64,11 @@ function normalizePlatformDetail(detail: UserPlatformDetail): UserPlatformDetail
 
 export const platformsApi = {
   async getPlatforms() {
-    return apiRequest<UserPlatformListItem[]>("/api/platforms", {
+    const items = await apiRequest<UserPlatformListItem[]>("/api/platforms", {
       auth: true,
     })
+
+    return items.map(normalizeListItem)
   },
 
   async getPlatform(platformId: string) {
@@ -89,6 +113,25 @@ export const platformsApi = {
     )
 
     return normalizePlatformDetail(detail)
+  },
+
+  async retryProvisioning(platformId: string) {
+    const detail = await apiRequest<UserPlatformDetail>(
+      `/api/platforms/${platformId}/retry-provisioning`,
+      {
+        method: "POST",
+        auth: true,
+      }
+    )
+
+    return normalizePlatformDetail(detail)
+  },
+
+  createShopSso(platformId: string) {
+    return apiRequest<ShopSsoRedirect>(`/api/platforms/${platformId}/shop-sso`, {
+      method: "POST",
+      auth: true,
+    })
   },
 
   deletePlatform(platformId: string) {

@@ -2,8 +2,9 @@ using ApolloShop.Domain.Common;
 
 namespace ApolloShop.Domain.Entities.Catalog;
 
-public class ProductVariant : Entity
+public class ProductVariant : Entity, ITenantScoped
 {
+    public Guid TenantId { get; set; }
     public Guid ProductId { get; set; }
     public string Sku { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;

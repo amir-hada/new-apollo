@@ -1,14 +1,26 @@
+export type PlanProductType = "Shop"
+
+export type SiteProvisioningStatus = "Pending" | "Ready" | "Failed"
+
 export type UserPlatformListItem = {
   platformId: string
   planId: string
   planName: string
   name: string
   createdAtUtc: string
+  productType: PlanProductType
+  tenantId: string | null
+  tenantSlug: string | null
+  storefrontUrl: string | null
+  adminUrl: string | null
+  provisioningStatus: SiteProvisioningStatus
+  provisioningError: string | null
 }
 
 export type CreateUserPlatformRequest = {
   planId: string
   name: string
+  slug?: string | null
 }
 
 export type PlatformSettings = {
@@ -18,6 +30,7 @@ export type PlatformSettings = {
   adminUsername: string
   adminPassword: string
   templateCode: string
+  slug: string | null
 }
 
 export type PlatformTemplateOption = {
@@ -32,6 +45,7 @@ export type UpdatePlatformSettingsRequest = {
   adminUsername: string
   adminPassword: string
   templateCode: string
+  slug?: string | null
 }
 
 export type UserPlatformDetail = {
@@ -42,6 +56,17 @@ export type UserPlatformDetail = {
   createdAtUtc: string
   settings: PlatformSettings
   availableTemplates: PlatformTemplateOption[]
+  productType: PlanProductType
+  tenantId: string | null
+  tenantSlug: string | null
+  storefrontUrl: string | null
+  adminUrl: string | null
+  provisioningStatus: SiteProvisioningStatus
+  provisioningError: string | null
+}
+
+export type ShopSsoRedirect = {
+  redirectUrl: string
 }
 
 export type PlanOption = {
@@ -52,4 +77,5 @@ export type PlanOption = {
   discountedPriceInToman: number | null
   billingPeriod: "Monthly" | "Yearly"
   isAvailable: boolean
+  productType?: PlanProductType
 }

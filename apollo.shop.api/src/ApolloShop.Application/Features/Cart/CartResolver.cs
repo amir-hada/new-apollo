@@ -47,6 +47,8 @@ internal static class CartResolver
         };
 
         db.Carts.Add(cart);
+        // Persist immediately so later item inserts don't race against a phantom cart row.
+        await db.SaveChangesAsync(cancellationToken);
         return cart;
     }
 

@@ -37,6 +37,7 @@ public class AddCartItemCommandHandler : IRequestHandler<AddCartItemCommand, Car
         }
 
         var variant = await _db.ProductVariants
+            .AsNoTracking()
             .Include(v => v.Product)
                 .ThenInclude(p => p.Specs)
                     .ThenInclude(s => s.Values)
@@ -59,9 +60,9 @@ public class AddCartItemCommandHandler : IRequestHandler<AddCartItemCommand, Car
         }
 
         var cart = await CartResolver.GetOrCreateAsync(_db, _clock, request.UserId, request.GuestToken, cancellationToken);
-        var existing = cart.Items.FirstOrDefault(i =>
-            i.ProductVariantId == variant.Id &&
-            (i.SelectedOptionsJson ?? "") == optionsJson);
+
+        // Unique index is (CartId, ProductVariantId) — match on variant only.
+        var existing = cart.Items.FirstOrDefault(i => i.ProductVariantId == variant.Id);
         var newQty = (existing?.Quantity ?? 0) + request.Quantity;
 
         if (product.TrackInventory)
@@ -88,7 +89,7 @@ public class AddCartItemCommandHandler : IRequestHandler<AddCartItemCommand, Car
 
         if (existing is null)
         {
-            cart.Items.Add(new CartItem
+            var item = new CartItem
             {
                 Id = Guid.NewGuid(),
                 CartId = cart.Id,
@@ -96,7 +97,9 @@ public class AddCartItemCommandHandler : IRequestHandler<AddCartItemCommand, Car
                 Quantity = request.Quantity,
                 UnitPriceSnapshot = unitPrice,
                 SelectedOptionsJson = optionsJson
-            });
+            };
+            cart.Items.Add(item);
+            _db.CartItems.Add(item);
         }
         else
         {
@@ -134,6 +137,7 @@ public class UpdateCartItemCommandHandler : IRequestHandler<UpdateCartItemComman
             ?? throw new NotFoundException("CartItem", request.CartItemId);
 
         var variant = await _db.ProductVariants
+            .AsNoTracking()
             .Include(v => v.Product)
             .FirstOrDefaultAsync(v => v.Id == item.ProductVariantId, cancellationToken)
             ?? throw new NotFoundException("ProductVariant", item.ProductVariantId);

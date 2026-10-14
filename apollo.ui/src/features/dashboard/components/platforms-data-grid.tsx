@@ -8,6 +8,10 @@ import {
 
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  PlatformSiteActions,
+  ProvisioningStatusBadge,
+} from "@/features/dashboard/components/platform-site-actions"
 import { PlatformsFilterBar } from "@/features/dashboard/components/platforms-filter-bar"
 import { PlatformsPagination } from "@/features/dashboard/components/platforms-pagination"
 import { PlatformsRowActions } from "@/features/dashboard/components/platforms-row-actions"
@@ -20,6 +24,7 @@ type PlatformsDataGridProps = {
   isLoading?: boolean
   error?: string | null
   onDelete: (platform: UserPlatformListItem) => void
+  onRefresh?: () => void
 }
 
 function formatDate(value: string) {
@@ -50,6 +55,15 @@ function LoadingRows() {
             <Skeleton className="mx-auto h-3 w-24" />
           </td>
           <td className="px-4 py-3 text-center">
+            <Skeleton className="mx-auto h-3 w-20" />
+          </td>
+          <td className="px-4 py-3 text-center">
+            <Skeleton className="mx-auto h-5 w-16 rounded-md" />
+          </td>
+          <td className="px-4 py-3 text-center">
+            <Skeleton className="mx-auto h-7 w-32 rounded-md" />
+          </td>
+          <td className="px-4 py-3 text-center">
             <Skeleton className="mx-auto h-7 w-16 rounded-md" />
           </td>
         </tr>
@@ -63,6 +77,7 @@ export function PlatformsDataGrid({
   isLoading = false,
   error = null,
   onDelete,
+  onRefresh,
 }: PlatformsDataGridProps) {
   const {
     search,
@@ -124,7 +139,7 @@ export function PlatformsDataGrid({
             </div>
           ) : null}
 
-          <table className="w-full min-w-[720px] border-collapse">
+          <table className="w-full min-w-[1100px] border-collapse">
             <thead ref={theadRef}>
               <tr className="border-b border-white/8 bg-white/[0.02]">
                 <th className="px-4 py-3 text-center text-xs font-light text-muted-foreground">
@@ -132,6 +147,15 @@ export function PlatformsDataGrid({
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-light text-muted-foreground">
                   پلن
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-light text-muted-foreground">
+                  آدرس سایت
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-light text-muted-foreground">
+                  وضعیت
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-light text-muted-foreground">
+                  فروشگاه
                 </th>
                 <th className="px-4 py-3 text-center">
                   <button
@@ -159,7 +183,7 @@ export function PlatformsDataGrid({
                 <LoadingRows />
               ) : error ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-16 text-center">
+                  <td colSpan={7} className="px-4 py-16 text-center">
                     <p className="text-sm font-light text-destructive" role="alert">
                       {error}
                     </p>
@@ -167,7 +191,7 @@ export function PlatformsDataGrid({
                 </tr>
               ) : displayedPlatforms.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-16 text-center">
+                  <td colSpan={7} className="px-4 py-16 text-center">
                     <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
                       <span className="flex size-12 items-center justify-center rounded-full border border-white/10 bg-background/70 text-muted-foreground">
                         <LayersIcon className="size-5" />
@@ -205,6 +229,36 @@ export function PlatformsDataGrid({
                       >
                         {platform.planName}
                       </Badge>
+                    </td>
+                    <td
+                      dir="ltr"
+                      className="px-4 py-3.5 text-center text-xs font-light text-muted-foreground"
+                    >
+                      {platform.tenantSlug || "—"}
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <ProvisioningStatusBadge
+                          status={platform.provisioningStatus}
+                        />
+                        {platform.provisioningStatus === "Failed" &&
+                        platform.provisioningError ? (
+                          <span
+                            className="max-w-[160px] truncate text-[10px] font-light text-destructive"
+                            title={platform.provisioningError}
+                          >
+                            {platform.provisioningError}
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <PlatformSiteActions
+                        platformId={platform.platformId}
+                        status={platform.provisioningStatus}
+                        storefrontUrl={platform.storefrontUrl}
+                        onChanged={onRefresh}
+                      />
                     </td>
                     <td className="px-4 py-3.5 text-center text-xs font-light tabular-nums text-muted-foreground">
                       {formatDate(platform.createdAtUtc)}

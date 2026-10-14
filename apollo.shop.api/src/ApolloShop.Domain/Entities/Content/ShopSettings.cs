@@ -3,8 +3,9 @@ using ApolloShop.Domain.Common;
 namespace ApolloShop.Domain.Entities.Content;
 
 /// <summary>Singleton store configuration row.</summary>
-public class ShopSettings : AuditableEntity
+public class ShopSettings : AuditableEntity, ITenantScoped
 {
+    public Guid TenantId { get; set; }
     public string ShopTitle { get; set; } = string.Empty;
 
     /// <summary>Title shown in the browser tab next to the favicon.</summary>

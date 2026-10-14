@@ -235,6 +235,11 @@ namespace Apollo.Infrastructure.Persistence.Migrations
                     b.Property<long>("PriceInToman")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("ProductType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -243,6 +248,8 @@ namespace Apollo.Infrastructure.Persistence.Migrations
                     b.HasIndex("IsPublished");
 
                     b.HasIndex("Name");
+
+                    b.HasIndex("ProductType");
 
                     b.HasIndex("IsAvailable", "BillingPeriod");
 
@@ -328,6 +335,10 @@ namespace Apollo.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("PlatformId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Slug")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("TemplateCode")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -347,6 +358,10 @@ namespace Apollo.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PlatformId")
                         .IsUnique();
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasFilter("[Slug] IS NOT NULL");
 
                     b.ToTable("PlatformConfigurations", (string)null);
                 });
@@ -469,6 +484,10 @@ namespace Apollo.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("AdminUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -480,6 +499,30 @@ namespace Apollo.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("PlanId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ProvisioningError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("ProvisioningStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("StorefrontUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("TenantAdminEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TenantSlug")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -489,6 +532,12 @@ namespace Apollo.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PlanId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantSlug")
+                        .IsUnique()
+                        .HasFilter("[TenantSlug] IS NOT NULL");
 
                     b.HasIndex("UserId");
 

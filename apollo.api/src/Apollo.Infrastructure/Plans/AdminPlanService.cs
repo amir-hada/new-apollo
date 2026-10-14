@@ -82,6 +82,7 @@ public sealed class AdminPlanService : IAdminPlanService
             AllowsInstallment = request.AllowsInstallment,
             IsPublished = false,
             BillingPeriod = request.BillingPeriod,
+            ProductType = request.ProductType,
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
         };
@@ -124,6 +125,7 @@ public sealed class AdminPlanService : IAdminPlanService
         plan.AllowsInstallment = request.AllowsInstallment;
         plan.IsPublished = request.IsPublished;
         plan.BillingPeriod = request.BillingPeriod;
+        plan.ProductType = request.ProductType;
         plan.UpdatedAtUtc = DateTime.UtcNow;
 
         await ReplacePlanChildrenAsync(
@@ -247,7 +249,8 @@ public sealed class AdminPlanService : IAdminPlanService
                 .Select(feature => new PlanPropertyDto(feature.Title, feature.Value))
                 .ToList(),
             templates,
-            plan.CreatedAtUtc);
+            plan.CreatedAtUtc,
+            plan.ProductType);
     }
 
     private async Task ValidateImageFileAsync(

@@ -1,6 +1,7 @@
 using ApolloShop.Application.Abstractions;
 using ApolloShop.Application.Features.ShopSettings;
 using ApolloShop.Application.Features.ShopSettings.DTOs;
+using ApolloShop.Domain.Tenancy;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ShopSettingsEntity = ApolloShop.Domain.Entities.Content.ShopSettings;
@@ -14,8 +15,13 @@ public class GetShopSettingsQueryHandler : IRequestHandler<GetShopSettingsQuery,
     public static readonly Guid DefaultSettingsId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
 
     private readonly IApplicationDbContext _db;
+    private readonly ITenantContext _tenant;
 
-    public GetShopSettingsQueryHandler(IApplicationDbContext db) => _db = db;
+    public GetShopSettingsQueryHandler(IApplicationDbContext db, ITenantContext tenant)
+    {
+        _db = db;
+        _tenant = tenant;
+    }
 
     public async Task<ShopSettingsDto> Handle(GetShopSettingsQuery request, CancellationToken cancellationToken)
     {
@@ -24,7 +30,7 @@ public class GetShopSettingsQueryHandler : IRequestHandler<GetShopSettingsQuery,
 
         if (settings is null)
         {
-            settings = CreateDefault();
+            settings = CreateDefault(_tenant.TenantId);
             _db.ShopSettings.Add(settings);
             await _db.SaveChangesAsync(cancellationToken);
         }
@@ -32,9 +38,10 @@ public class GetShopSettingsQueryHandler : IRequestHandler<GetShopSettingsQuery,
         return Map(settings);
     }
 
-    public static ShopSettingsEntity CreateDefault() => new()
+    public static ShopSettingsEntity CreateDefault(Guid tenantId) => new()
     {
-        Id = DefaultSettingsId,
+        Id = tenantId == TenantIds.Default ? DefaultSettingsId : Guid.NewGuid(),
+        TenantId = tenantId,
         ShopTitle = "فروشگاه آپولو",
         BrowserTitle = "فروشگاه آپولو | ApolloShop",
         Currency = "تومان",

@@ -30,7 +30,7 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.Property(x => x.CreatedBy).HasMaxLength(256);
         builder.Property(x => x.UpdatedBy).HasMaxLength(256);
 
-        builder.HasIndex(x => x.Number).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
 
         builder.HasOne(x => x.User)
             .WithMany()

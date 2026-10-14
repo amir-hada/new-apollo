@@ -182,8 +182,7 @@ internal static class ProductWriteHelper
         Abstractions.IApplicationDbContext db,
         CancellationToken cancellationToken)
     {
-        var codes = await db.Products
-            .IgnoreQueryFilters()
+        var codes = await db.ProductsIncludingDeleted
             .Select(p => p.ProductCode)
             .ToListAsync(cancellationToken);
 

@@ -7,6 +7,7 @@ using Apollo.Application.Features.Admin.Commands.SetUserActiveStatus;
 using Apollo.Application.Features.Admin.Commands.UpdatePlan;
 using Apollo.Application.Features.Admin.Queries.GetPlanById;
 using Apollo.Application.Features.Admin.Queries.GetPlans;
+using Apollo.Application.Features.Admin.Queries.GetSites;
 using Apollo.Application.Features.Admin.Queries.GetUsers;
 using Apollo.Application.Common.Models;
 using Apollo.Domain.Constants;
@@ -65,6 +66,13 @@ public sealed class AdminController : ControllerBase
         return Ok(new { message = UserAccessMessages.UserDeleted });
     }
 
+    [HttpGet("sites")]
+    public async Task<IActionResult> GetSites(CancellationToken cancellationToken)
+    {
+        var sites = await _sender.Send(new GetAdminSitesQuery(), cancellationToken);
+        return Ok(sites);
+    }
+
     [HttpGet("plans")]
     public async Task<IActionResult> GetPlans(CancellationToken cancellationToken)
     {
@@ -95,7 +103,8 @@ public sealed class AdminController : ControllerBase
                 request.DiscountedPriceInToman,
                 request.IsAvailable,
                 request.AllowsInstallment,
-                request.BillingPeriod),
+                request.BillingPeriod,
+                request.ProductType),
             cancellationToken);
 
         return Created($"/api/admin/plans/{plan.PlanId}", plan);
@@ -120,7 +129,8 @@ public sealed class AdminController : ControllerBase
                 request.IsPublished,
                 request.BillingPeriod,
                 request.Properties,
-                request.Templates),
+                request.Templates,
+                request.ProductType),
             cancellationToken);
 
         return Ok(plan);

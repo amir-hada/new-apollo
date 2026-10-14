@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using ApolloShop.Persistence.Interceptors;
+using ApolloShop.Persistence.Tenancy;
 
 namespace ApolloShop.Persistence;
 
@@ -27,6 +28,9 @@ public class ApplicationDbContextFactory : IDesignTimeDbContextFactory<Applicati
             configuration.GetConnectionString("DefaultConnection")
             ?? "Server=localhost,1433;Database=ApolloShop;User Id=sa;Password=Your_password123;TrustServerCertificate=True;");
 
-        return new ApplicationDbContext(optionsBuilder.Options, new AuditableEntityInterceptor());
+        var tenantContext = new TenantContext();
+        tenantContext.Bypass();
+
+        return new ApplicationDbContext(optionsBuilder.Options, new AuditableEntityInterceptor(), tenantContext);
     }
 }

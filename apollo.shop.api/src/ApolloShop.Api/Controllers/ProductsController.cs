@@ -60,6 +60,14 @@ public class ProductsController : ControllerBase
         return Ok(await _mediator.Send(new ToggleProductLikeCommand(id, userId), cancellationToken));
     }
 
+    [HttpGet("{id:guid}/comments")]
+    public async Task<IActionResult> GetComments(
+        Guid id,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default) =>
+        Ok(await _mediator.Send(new GetProductCommentsQuery(id, page, pageSize), cancellationToken));
+
     [Authorize]
     [HttpPost("{id:guid}/comments")]
     public async Task<IActionResult> AddComment(

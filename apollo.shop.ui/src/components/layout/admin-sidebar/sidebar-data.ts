@@ -83,6 +83,11 @@ export const sidebarData: SidebarData = {
           ],
         },
         {
+          title: "فروشگاه‌های جدید",
+          url: "/admin/tenants",
+          icon: Store,
+        },
+        {
           title: "تنظیمات",
           url: "/admin/settings",
           icon: Settings,

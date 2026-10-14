@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Percent, Zap } from "lucide-react";
 import { toPersianDigits } from "@/features/auth/normalize-phone";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { getProductDisplayPrices } from "@/lib/product-price";
 import {
   getActiveShopCurrency,
@@ -65,20 +66,14 @@ function AmazingProductCard({ product }: { product: ProductListItem }) {
       href={`/products/${product.slug}`}
       className="group flex w-[148px] shrink-0 flex-col rounded-md bg-white p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:w-[168px] dark:bg-card"
     >
-      <div className="relative mb-2 aspect-square overflow-hidden rounded-md bg-[#f5f5f5] dark:bg-muted">
-        {product.primaryImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={product.primaryImageUrl}
-            alt={product.name}
-            className="size-full object-contain p-2 transition duration-300 group-hover:scale-[1.03]"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex size-full items-center justify-center text-[11px] text-muted-foreground">
-            بدون تصویر
-          </div>
-        )}
+      <div className="relative mb-2 aspect-square overflow-hidden bg-white dark:bg-card">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={resolveProductImageUrl(product.primaryImageUrl)}
+          alt={product.name}
+          className="size-full object-contain p-2 transition duration-300 group-hover:scale-[1.03]"
+          loading="lazy"
+        />
         {discountPercent != null ? (
           <span className="absolute start-1.5 top-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
             {toPersianDigits(String(discountPercent))}٪
@@ -86,7 +81,7 @@ function AmazingProductCard({ product }: { product: ProductListItem }) {
         ) : null}
       </div>
 
-      <h3 className="mb-2 line-clamp-2 min-h-[2.4rem] text-[12px] leading-5 text-[#3f4064] dark:text-foreground">
+      <h3 className="mb-2 line-clamp-2 min-h-[2.4rem] text-[12px] font-semibold leading-5 text-[#3f4064] dark:text-foreground">
         {product.name}
       </h3>
 
@@ -177,14 +172,6 @@ export function AmazingOffers({ products }: { products: ProductListItem[] }) {
                 پیشنهاد امروز تمام شد
               </span>
             )}
-
-            <Link
-              href="/products?sort=featured"
-              className="hidden items-center gap-1 rounded-md bg-white/15 px-3 py-2 text-[12px] font-medium text-white ring-1 ring-white/20 transition hover:bg-white/25 sm:inline-flex"
-            >
-              مشاهده همه
-              <ChevronLeft className="size-4" />
-            </Link>
           </div>
         </div>
 

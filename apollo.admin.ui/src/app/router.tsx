@@ -8,6 +8,7 @@ import { DashboardHomePage } from "@/features/dashboard/pages/dashboard-home-pag
 import { PlansPage } from "@/features/dashboard/pages/plans-page"
 import { PlanDetailsPage } from "@/features/dashboard/pages/plan-details-page"
 import { SettingsPage } from "@/features/dashboard/pages/settings-page"
+import { SitesPage } from "@/features/dashboard/pages/sites-page"
 import { SupportPage } from "@/features/dashboard/pages/support-page"
 import { UsersPage } from "@/features/dashboard/pages/users-page"
 
@@ -50,6 +51,10 @@ export const router = createBrowserRouter([
           {
             path: "plans/:planId",
             element: <PlanDetailsPage />,
+          },
+          {
+            path: "sites",
+            element: <SitesPage />,
           },
           {
             path: "support",

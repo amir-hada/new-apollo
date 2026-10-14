@@ -11,15 +11,20 @@ public record UpdateShopSettingsCommand(UpdateShopSettingsRequest Request) : IRe
 public class UpdateShopSettingsCommandHandler : IRequestHandler<UpdateShopSettingsCommand, ShopSettingsDto>
 {
     private readonly IApplicationDbContext _db;
+    private readonly ITenantContext _tenant;
 
-    public UpdateShopSettingsCommandHandler(IApplicationDbContext db) => _db = db;
+    public UpdateShopSettingsCommandHandler(IApplicationDbContext db, ITenantContext tenant)
+    {
+        _db = db;
+        _tenant = tenant;
+    }
 
     public async Task<ShopSettingsDto> Handle(UpdateShopSettingsCommand request, CancellationToken cancellationToken)
     {
         var settings = await _db.ShopSettings.FirstOrDefaultAsync(cancellationToken);
         if (settings is null)
         {
-            settings = GetShopSettingsQueryHandler.CreateDefault();
+            settings = GetShopSettingsQueryHandler.CreateDefault(_tenant.TenantId);
             _db.ShopSettings.Add(settings);
         }
 

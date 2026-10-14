@@ -9,7 +9,7 @@ import {
   setRefreshToken,
   useAuthStore,
 } from "@/lib/auth-store";
-import { API_URL } from "@/lib/server-api";
+import { API_URL, TENANT_HEADER, getClientTenantSlug } from "@/lib/tenant";
 import type { AuthResponse } from "@/types/api";
 
 export { API_URL };
@@ -29,6 +29,7 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (guest) {
     config.headers["X-Guest-Token"] = guest;
   }
+  config.headers[TENANT_HEADER] = getClientTenantSlug();
   return config;
 });
 
@@ -43,7 +44,10 @@ async function refreshAccessToken() {
     const { data } = await axios.post<AuthResponse>(
       `${API_URL}/api/auth/refresh`,
       { accessToken, refreshToken },
-      { withCredentials: true },
+      {
+        withCredentials: true,
+        headers: { [TENANT_HEADER]: getClientTenantSlug() },
+      },
     );
     setAccessToken(data.accessToken);
     setRefreshToken(data.refreshToken);

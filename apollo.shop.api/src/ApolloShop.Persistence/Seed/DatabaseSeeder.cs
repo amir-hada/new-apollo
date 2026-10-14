@@ -1,6 +1,8 @@
 using ApolloShop.Domain.Entities.Content;
 using ApolloShop.Domain.Entities.Identity;
 using ApolloShop.Domain.Entities.Support;
+using ApolloShop.Domain.Entities.Tenancy;
+using ApolloShop.Domain.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace ApolloShop.Persistence.Seed;
@@ -18,13 +20,15 @@ public static class DatabaseSeeder
             await context.Database.EnsureCreatedAsync(cancellationToken);
         }
 
+        await EnsureDefaultTenantAsync(context, cancellationToken);
         await RemoveLegacyDemoCatalogAsync(context, cancellationToken);
 
-        if (!await context.ShopSettings.AnyAsync(cancellationToken))
+        if (!await context.ShopSettings.AnyAsync(s => s.TenantId == TenantIds.Default, cancellationToken))
         {
             context.ShopSettings.Add(new ShopSettings
             {
                 Id = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
+                TenantId = TenantIds.Default,
                 ShopTitle = "فروشگاه آپولو",
                 BrowserTitle = "فروشگاه آپولو | ApolloShop",
                 Currency = "تومان",
@@ -37,15 +41,66 @@ public static class DatabaseSeeder
             await context.SaveChangesAsync(cancellationToken);
         }
 
-        if (await context.Roles.AnyAsync(cancellationToken))
+        if (!await context.Roles.AnyAsync(cancellationToken))
+        {
+            await SeedInitialDataAsync(context, cancellationToken);
+        }
+
+        await EnsurePlatformAdminAsync(context, cancellationToken);
+    }
+
+    private static async Task EnsureDefaultTenantAsync(ApplicationDbContext context, CancellationToken cancellationToken)
+    {
+        if (await context.Tenants.AnyAsync(t => t.Id == TenantIds.Default, cancellationToken))
         {
             return;
         }
 
+        context.Tenants.Add(new Tenant
+        {
+            Id = TenantIds.Default,
+            Slug = TenantIds.DefaultSlug,
+            Name = TenantIds.DefaultName,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task EnsurePlatformAdminAsync(ApplicationDbContext context, CancellationToken cancellationToken)
+    {
+        var adminUserId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+
+        if (!await context.Roles.AnyAsync(r => r.Id == WellKnownRoles.PlatformAdminId, cancellationToken))
+        {
+            context.Roles.Add(new Role
+            {
+                Id = WellKnownRoles.PlatformAdminId,
+                Name = WellKnownRoles.PlatformAdmin,
+                NormalizedName = "PLATFORMADMIN",
+                Description = "Cross-tenant platform administration"
+            });
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
+        var adminExists = await context.Users.IgnoreQueryFilters()
+            .AnyAsync(u => u.Id == adminUserId, cancellationToken);
+        var alreadyAssigned = await context.UserRoles
+            .AnyAsync(ur => ur.UserId == adminUserId && ur.RoleId == WellKnownRoles.PlatformAdminId, cancellationToken);
+
+        if (adminExists && !alreadyAssigned)
+        {
+            context.UserRoles.Add(new UserRole { UserId = adminUserId, RoleId = WellKnownRoles.PlatformAdminId });
+            await context.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private static async Task SeedInitialDataAsync(ApplicationDbContext context, CancellationToken cancellationToken)
+    {
         var now = DateTime.UtcNow;
 
-        var adminRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-        var customerRoleId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var adminRoleId = WellKnownRoles.AdminId;
+        var customerRoleId = WellKnownRoles.CustomerId;
         var adminUserId = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
         var permissions = CreatePermissions();
@@ -71,6 +126,7 @@ public static class DatabaseSeeder
         var adminUser = new User
         {
             Id = adminUserId,
+            TenantId = TenantIds.Default,
             Email = "admin@apolloshop.ir",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@12345"),
             FirstName = "مدیر",
@@ -89,18 +145,21 @@ public static class DatabaseSeeder
             new TicketCategory
             {
                 Id = Guid.Parse("d4d4d4d4-d4d4-d4d4-d4d4-d4d4d4d4d401"),
+                TenantId = TenantIds.Default,
                 Name = "سفارشات",
                 Description = "پیگیری و مشکلات سفارش"
             },
             new TicketCategory
             {
                 Id = Guid.Parse("d4d4d4d4-d4d4-d4d4-d4d4-d4d4d4d4d402"),
+                TenantId = TenantIds.Default,
                 Name = "پرداخت",
                 Description = "مسائل مربوط به پرداخت"
             },
             new TicketCategory
             {
                 Id = Guid.Parse("d4d4d4d4-d4d4-d4d4-d4d4-d4d4d4d4d403"),
+                TenantId = TenantIds.Default,
                 Name = "فنی",
                 Description = "مشکلات فنی وب‌سایت"
             }

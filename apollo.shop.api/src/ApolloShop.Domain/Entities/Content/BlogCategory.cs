@@ -2,8 +2,9 @@ using ApolloShop.Domain.Common;
 
 namespace ApolloShop.Domain.Entities.Content;
 
-public class BlogCategory : AuditableEntity
+public class BlogCategory : AuditableEntity, ITenantScoped
 {
+    public Guid TenantId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string? Description { get; set; }

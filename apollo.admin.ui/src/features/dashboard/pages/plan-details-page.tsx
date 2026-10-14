@@ -28,10 +28,12 @@ import { useAuthenticatedImageUrl } from "@/hooks/use-authenticated-image-url"
 import { adminApi } from "@/lib/api/admin-api"
 import { ApiError } from "@/lib/api/client"
 import { uploadPlanImage } from "@/lib/api/files-api"
-import type {
-  AdminPlanListItem,
-  PlanBillingPeriod,
-  UpdatePlanRequest,
+import {
+  PLAN_PRODUCT_TYPE_LABELS,
+  type AdminPlanListItem,
+  type PlanBillingPeriod,
+  type PlanProductType,
+  type UpdatePlanRequest,
 } from "@/lib/api/plan-types"
 import { dashboardToast } from "@/lib/dashboard-toast"
 import { parseNumericInput } from "@/lib/persian/digits"
@@ -265,6 +267,7 @@ export function PlanDetailsPage() {
   const [published, setPublished] = React.useState<PublishedValue>("draft")
   const [billingPeriod, setBillingPeriod] =
     React.useState<PlanBillingPeriod>("Monthly")
+  const [productType, setProductType] = React.useState<PlanProductType>("Shop")
   const [properties, setProperties] = React.useState<PropertyDraft[]>([
     createPropertyDraft(),
   ])
@@ -297,6 +300,7 @@ export function PlanDetailsPage() {
     setInstallment(next.allowsInstallment ? "yes" : "no")
     setPublished(next.isPublished ? "published" : "draft")
     setBillingPeriod(next.billingPeriod)
+    setProductType(next.productType)
     setProperties(
       next.properties.length > 0
         ? next.properties.map((property) =>
@@ -501,6 +505,7 @@ export function PlanDetailsPage() {
 
       const payload: UpdatePlanRequest = {
         name: name.trim(),
+        productType,
         imageFileId,
         description: description.trim(),
         priceInToman: parsedPrice,
@@ -660,6 +665,17 @@ export function PlanDetailsPage() {
                   />
                   <PriceHint value={discountedPrice} />
                 </div>
+
+                <SettingsSelect
+                  id="plan-details-product-type"
+                  label="نوع محصول"
+                  value={productType}
+                  disabled={isSubmitting}
+                  onChange={setProductType}
+                  options={[
+                    { value: "Shop", label: PLAN_PRODUCT_TYPE_LABELS.Shop },
+                  ]}
+                />
 
                 <SettingsSelect
                   id="plan-details-availability"

@@ -3,6 +3,7 @@ using Apollo.Application.Abstractions.Identity;
 using Apollo.Application.Abstractions.Notifications;
 using Apollo.Application.Abstractions.Plans;
 using Apollo.Application.Abstractions.Platforms;
+using Apollo.Application.Abstractions.Shop;
 using Apollo.Application.Abstractions.Storage;
 using Apollo.Infrastructure.Identity;
 using Apollo.Infrastructure.Notifications;
@@ -10,12 +11,14 @@ using Apollo.Infrastructure.Options;
 using Apollo.Infrastructure.Persistence;
 using Apollo.Infrastructure.Plans;
 using Apollo.Infrastructure.Platforms;
+using Apollo.Infrastructure.Shop;
 using Apollo.Infrastructure.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Apollo.Infrastructure;
@@ -28,6 +31,7 @@ public static class DependencyInjection
     {
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<MinioOptions>(configuration.GetSection(MinioOptions.SectionName));
+        services.Configure<ShopIntegrationOptions>(configuration.GetSection(ShopIntegrationOptions.SectionName));
 
         services.AddHttpContextAccessor();
         services.AddDbContext<ApplicationDbContext>(options =>
@@ -101,6 +105,12 @@ public static class DependencyInjection
         services.AddScoped<IAdminPlanService, AdminPlanService>();
         services.AddScoped<IPlanCatalogService, PlanCatalogService>();
         services.AddScoped<IUserPlatformService, UserPlatformService>();
+        services.AddHttpClient<IShopProvisioningClient, ShopProvisioningClient>((serviceProvider, client) =>
+        {
+            var shopOptions = serviceProvider.GetRequiredService<IOptions<ShopIntegrationOptions>>().Value;
+            client.BaseAddress = new Uri(shopOptions.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
         services.AddScoped<ILoginHistoryService, LoginHistoryService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<ITokenService, TokenService>();

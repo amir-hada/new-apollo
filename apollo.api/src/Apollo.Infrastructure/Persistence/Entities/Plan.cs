@@ -24,6 +24,8 @@ public sealed class Plan
 
     public string BillingPeriod { get; set; } = PlanBillingPeriod.Monthly;
 
+    public PlanProductType ProductType { get; set; } = PlanProductType.Shop;
+
     public DateTime CreatedAtUtc { get; set; }
 
     public DateTime UpdatedAtUtc { get; set; }

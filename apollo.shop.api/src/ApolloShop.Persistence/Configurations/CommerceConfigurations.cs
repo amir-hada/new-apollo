@@ -11,6 +11,8 @@ public class CartConfiguration : IEntityTypeConfiguration<Cart>
         builder.ToTable("Carts");
 
         builder.HasKey(x => x.Id);
+        // Client-assigned Guids; without this, Add via navigation is treated as UPDATE.
+        builder.Property(x => x.Id).ValueGeneratedNever();
 
         builder.Property(x => x.GuestToken).HasMaxLength(100);
 
@@ -31,6 +33,8 @@ public class CartItemConfiguration : IEntityTypeConfiguration<CartItem>
         builder.ToTable("CartItems");
 
         builder.HasKey(x => x.Id);
+        // Client-assigned Guids; without this, Add via navigation is treated as UPDATE.
+        builder.Property(x => x.Id).ValueGeneratedNever();
 
         builder.Property(x => x.UnitPriceSnapshot).HasPrecision(18, 2);
         builder.Property(x => x.SelectedOptionsJson).HasMaxLength(4000);
@@ -90,7 +94,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(x => x.CreatedBy).HasMaxLength(256);
         builder.Property(x => x.UpdatedBy).HasMaxLength(256);
 
-        builder.HasIndex(x => x.OrderNumber).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.OrderNumber }).IsUnique();
         builder.HasIndex(x => x.UserId);
 
         builder.HasOne(x => x.User)
@@ -117,6 +121,8 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
         builder.ToTable("OrderItems");
 
         builder.HasKey(x => x.Id);
+        // Client-assigned Guids; without this, Add via navigation is treated as UPDATE.
+        builder.Property(x => x.Id).ValueGeneratedNever();
 
         builder.Property(x => x.ProductName).HasMaxLength(300).IsRequired();
         builder.Property(x => x.Sku).HasMaxLength(100).IsRequired();
@@ -167,6 +173,6 @@ public class CouponConfiguration : IEntityTypeConfiguration<Coupon>
         builder.Property(x => x.PercentOff).HasPrecision(5, 2);
         builder.Property(x => x.AmountOff).HasPrecision(18, 2);
 
-        builder.HasIndex(x => x.Code).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
     }
 }

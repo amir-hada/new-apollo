@@ -1,6 +1,7 @@
 using Apollo.Application.Abstractions.Plans;
 using Apollo.Application.Abstractions.Storage;
 using Apollo.Application.Common.Models;
+using Apollo.Domain.Constants;
 using Apollo.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,11 +21,14 @@ public sealed class PlanCatalogService : IPlanCatalogService
     }
 
     public async Task<IReadOnlyList<PublicPlanListItemDto>> GetPublicPlansAsync(
+        PlanProductType? productType = null,
         CancellationToken cancellationToken = default)
     {
+        var type = productType ?? PlanProductType.Shop;
+
         var plans = await _dbContext.Plans
             .AsNoTracking()
-            .Where(plan => plan.IsPublished)
+            .Where(plan => plan.IsPublished && plan.ProductType == type)
             .Include(plan => plan.Properties.OrderBy(feature => feature.SortOrder))
             .OrderByDescending(plan => plan.IsAvailable)
             .ThenBy(plan => plan.PriceInToman)
@@ -52,7 +56,8 @@ public sealed class PlanCatalogService : IPlanCatalogService
                 plan.Properties
                     .OrderBy(feature => feature.SortOrder)
                     .Select(feature => new PlanPropertyDto(feature.Title, feature.Value))
-                    .ToList()));
+                    .ToList(),
+                plan.ProductType));
         }
 
         return result;

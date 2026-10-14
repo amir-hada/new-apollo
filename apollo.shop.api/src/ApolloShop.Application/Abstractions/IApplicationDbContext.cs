@@ -3,12 +3,20 @@ using ApolloShop.Domain.Entities.Commerce;
 using ApolloShop.Domain.Entities.Content;
 using ApolloShop.Domain.Entities.Identity;
 using ApolloShop.Domain.Entities.Support;
+using ApolloShop.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace ApolloShop.Application.Abstractions;
 
 public interface IApplicationDbContext
 {
+    DbSet<Tenant> Tenants { get; }
+    DbSet<ShopSsoCode> ShopSsoCodes { get; }
+
+    /// <summary>Soft-deleted rows included, still restricted to the current tenant.</summary>
+    IQueryable<Product> ProductsIncludingDeleted { get; }
+    IQueryable<BlogPost> BlogPostsIncludingDeleted { get; }
+
     DbSet<User> Users { get; }
     DbSet<Role> Roles { get; }
     DbSet<Permission> Permissions { get; }

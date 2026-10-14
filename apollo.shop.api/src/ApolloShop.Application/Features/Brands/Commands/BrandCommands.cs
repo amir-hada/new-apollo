@@ -88,8 +88,7 @@ public class DeleteBrandCommandHandler : IRequestHandler<DeleteBrandCommand>
         var entity = await _db.Brands.FirstOrDefaultAsync(b => b.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Brand", request.Id);
 
-        var assignedToActive = await _db.Products
-            .IgnoreQueryFilters()
+        var assignedToActive = await _db.ProductsIncludingDeleted
             .AnyAsync(p => p.BrandId == entity.Id && !p.IsDeleted, cancellationToken);
         if (assignedToActive)
         {
@@ -97,8 +96,7 @@ public class DeleteBrandCommandHandler : IRequestHandler<DeleteBrandCommand>
         }
 
         // Detach soft-deleted products so FK does not block brand removal.
-        var softDeleted = await _db.Products
-            .IgnoreQueryFilters()
+        var softDeleted = await _db.ProductsIncludingDeleted
             .Where(p => p.BrandId == entity.Id && p.IsDeleted)
             .ToListAsync(cancellationToken);
         foreach (var product in softDeleted)

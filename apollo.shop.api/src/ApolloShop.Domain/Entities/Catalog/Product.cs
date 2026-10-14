@@ -3,8 +3,9 @@ using ApolloShop.Domain.Enums;
 
 namespace ApolloShop.Domain.Entities.Catalog;
 
-public class Product : AuditableEntity, ISoftDeletable
+public class Product : AuditableEntity, ISoftDeletable, ITenantScoped
 {
+    public Guid TenantId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;

@@ -56,6 +56,9 @@ namespace ApolloShop.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -65,7 +68,7 @@ namespace ApolloShop.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Slug")
+                    b.HasIndex("TenantId", "Slug")
                         .IsUnique();
 
                     b.ToTable("Brands", (string)null);
@@ -107,6 +110,9 @@ namespace ApolloShop.Persistence.Migrations
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -118,7 +124,7 @@ namespace ApolloShop.Persistence.Migrations
 
                     b.HasIndex("ParentId");
 
-                    b.HasIndex("Slug")
+                    b.HasIndex("TenantId", "Slug")
                         .IsUnique();
 
                     b.ToTable("Categories", (string)null);
@@ -243,6 +249,9 @@ namespace ApolloShop.Persistence.Migrations
                     b.Property<int>("StockQuantity")
                         .HasColumnType("int");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("TrackInventory")
                         .HasColumnType("bit");
 
@@ -259,14 +268,14 @@ namespace ApolloShop.Persistence.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.HasIndex("ProductCode")
+                    b.HasIndex("TenantId", "ProductCode")
                         .IsUnique();
 
-                    b.HasIndex("Sku")
+                    b.HasIndex("TenantId", "Sku")
                         .IsUnique()
                         .HasFilter("[Sku] IS NOT NULL AND [Sku] <> ''");
 
-                    b.HasIndex("Slug")
+                    b.HasIndex("TenantId", "Slug")
                         .IsUnique();
 
                     b.ToTable("Products", (string)null);
@@ -288,9 +297,12 @@ namespace ApolloShop.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("TenantId", "Name")
                         .IsUnique();
 
                     b.ToTable("ProductAttributes", (string)null);
@@ -491,11 +503,16 @@ namespace ApolloShop.Persistence.Migrations
                     b.Property<int>("StockQuantity")
                         .HasColumnType("int");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
 
                     b.HasIndex("Sku");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("ProductVariants", (string)null);
                 });
@@ -591,6 +608,9 @@ namespace ApolloShop.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -608,6 +628,8 @@ namespace ApolloShop.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId");
+
                     b.HasIndex("UserId");
 
                     b.ToTable("Addresses", (string)null);
@@ -616,12 +638,14 @@ namespace ApolloShop.Persistence.Migrations
             modelBuilder.Entity("ApolloShop.Domain.Entities.Commerce.Cart", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("GuestToken")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
@@ -633,6 +657,8 @@ namespace ApolloShop.Persistence.Migrations
 
                     b.HasIndex("GuestToken");
 
+                    b.HasIndex("TenantId");
+
                     b.HasIndex("UserId");
 
                     b.ToTable("Carts", (string)null);
@@ -641,7 +667,6 @@ namespace ApolloShop.Persistence.Migrations
             modelBuilder.Entity("ApolloShop.Domain.Entities.Commerce.CartItem", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("CartId")
@@ -702,9 +727,12 @@ namespace ApolloShop.Persistence.Migrations
                     b.Property<DateTime?>("StartsAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("TenantId", "Code")
                         .IsUnique();
 
                     b.ToTable("Coupons", (string)null);
@@ -767,6 +795,9 @@ namespace ApolloShop.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -779,10 +810,10 @@ namespace ApolloShop.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrderNumber")
-                        .IsUnique();
-
                     b.HasIndex("UserId");
+
+                    b.HasIndex("TenantId", "OrderNumber")
+                        .IsUnique();
 
                     b.ToTable("Orders", (string)null);
                 });
@@ -790,7 +821,6 @@ namespace ApolloShop.Persistence.Migrations
             modelBuilder.Entity("ApolloShop.Domain.Entities.Commerce.OrderItem", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("LineTotal")
@@ -923,6 +953,9 @@ namespace ApolloShop.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -932,7 +965,7 @@ namespace ApolloShop.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Slug")
+                    b.HasIndex("TenantId", "Slug")
                         .IsUnique();
 
                     b.ToTable("BlogCategories", (string)null);
@@ -998,6 +1031,9 @@ namespace ApolloShop.Persistence.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -1016,7 +1052,7 @@ namespace ApolloShop.Persistence.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.HasIndex("Slug")
+                    b.HasIndex("TenantId", "Slug")
                         .IsUnique();
 
                     b.ToTable("BlogPosts", (string)null);
@@ -1053,9 +1089,12 @@ namespace ApolloShop.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Slug")
+                    b.HasIndex("TenantId", "Slug")
                         .IsUnique();
 
                     b.ToTable("BlogTags", (string)null);
@@ -1127,6 +1166,9 @@ namespace ApolloShop.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -1135,6 +1177,9 @@ namespace ApolloShop.Persistence.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
 
                     b.ToTable("ShopSettings", (string)null);
                 });
@@ -1200,7 +1245,12 @@ namespace ApolloShop.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("PhoneNumber", "Purpose", "CreatedAtUtc");
 
@@ -1361,6 +1411,9 @@ namespace ApolloShop.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -1370,10 +1423,10 @@ namespace ApolloShop.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Email")
+                    b.HasIndex("TenantId", "Email")
                         .IsUnique();
 
-                    b.HasIndex("PhoneNumber")
+                    b.HasIndex("TenantId", "PhoneNumber")
                         .IsUnique()
                         .HasFilter("[PhoneNumber] IS NOT NULL");
 
@@ -1430,6 +1483,9 @@ namespace ApolloShop.Persistence.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -1446,10 +1502,10 @@ namespace ApolloShop.Persistence.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.HasIndex("Number")
-                        .IsUnique();
-
                     b.HasIndex("UserId");
+
+                    b.HasIndex("TenantId", "Number")
+                        .IsUnique();
 
                     b.ToTable("Tickets", (string)null);
                 });
@@ -1506,7 +1562,12 @@ namespace ApolloShop.Persistence.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("TicketCategories", (string)null);
                 });
@@ -1553,12 +1614,108 @@ namespace ApolloShop.Persistence.Migrations
                     b.ToTable("TicketMessages", (string)null);
                 });
 
+            modelBuilder.Entity("ApolloShop.Domain.Entities.Tenancy.ShopSsoCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique();
+
+                    b.HasIndex("ExpiresAtUtc");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("ShopSsoCodes", (string)null);
+                });
+
+            modelBuilder.Entity("ApolloShop.Domain.Entities.Tenancy.Tenant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CustomDomain")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid?>("ExternalOwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomDomain")
+                        .IsUnique()
+                        .HasFilter("[CustomDomain] IS NOT NULL");
+
+                    b.HasIndex("ExternalOwnerId");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("Tenants", (string)null);
+                });
+
+            modelBuilder.Entity("ApolloShop.Domain.Entities.Catalog.Brand", b =>
+                {
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ApolloShop.Domain.Entities.Catalog.Category", b =>
                 {
                     b.HasOne("ApolloShop.Domain.Entities.Catalog.Category", "Parent")
                         .WithMany("Children")
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Parent");
                 });
@@ -1575,9 +1732,24 @@ namespace ApolloShop.Persistence.Migrations
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Brand");
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("ApolloShop.Domain.Entities.Catalog.ProductAttribute", b =>
+                {
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ApolloShop.Domain.Entities.Catalog.ProductAttributeValue", b =>
@@ -1654,6 +1826,12 @@ namespace ApolloShop.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Product");
                 });
 
@@ -1689,6 +1867,12 @@ namespace ApolloShop.Persistence.Migrations
 
             modelBuilder.Entity("ApolloShop.Domain.Entities.Commerce.Address", b =>
                 {
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ApolloShop.Domain.Entities.Identity.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -1696,6 +1880,15 @@ namespace ApolloShop.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ApolloShop.Domain.Entities.Commerce.Cart", b =>
+                {
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ApolloShop.Domain.Entities.Commerce.CartItem", b =>
@@ -1717,8 +1910,23 @@ namespace ApolloShop.Persistence.Migrations
                     b.Navigation("ProductVariant");
                 });
 
+            modelBuilder.Entity("ApolloShop.Domain.Entities.Commerce.Coupon", b =>
+                {
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ApolloShop.Domain.Entities.Commerce.Order", b =>
                 {
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ApolloShop.Domain.Entities.Identity.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -1766,6 +1974,15 @@ namespace ApolloShop.Persistence.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("ApolloShop.Domain.Entities.Content.BlogCategory", b =>
+                {
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ApolloShop.Domain.Entities.Content.BlogPost", b =>
                 {
                     b.HasOne("ApolloShop.Domain.Entities.Identity.User", "Author")
@@ -1778,6 +1995,12 @@ namespace ApolloShop.Persistence.Migrations
                         .WithMany("Posts")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Author");
 
@@ -1801,6 +2024,33 @@ namespace ApolloShop.Persistence.Migrations
                     b.Navigation("Post");
 
                     b.Navigation("Tag");
+                });
+
+            modelBuilder.Entity("ApolloShop.Domain.Entities.Content.BlogTag", b =>
+                {
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ApolloShop.Domain.Entities.Content.ShopSettings", b =>
+                {
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ApolloShop.Domain.Entities.Identity.PhoneOtp", b =>
+                {
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ApolloShop.Domain.Entities.Identity.RefreshToken", b =>
@@ -1831,6 +2081,15 @@ namespace ApolloShop.Persistence.Migrations
                     b.Navigation("Permission");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("ApolloShop.Domain.Entities.Identity.User", b =>
+                {
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ApolloShop.Domain.Entities.Identity.UserRole", b =>
@@ -1864,6 +2123,12 @@ namespace ApolloShop.Persistence.Migrations
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ApolloShop.Domain.Entities.Identity.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -1888,6 +2153,15 @@ namespace ApolloShop.Persistence.Migrations
                     b.Navigation("Message");
                 });
 
+            modelBuilder.Entity("ApolloShop.Domain.Entities.Support.TicketCategory", b =>
+                {
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ApolloShop.Domain.Entities.Support.TicketMessage", b =>
                 {
                     b.HasOne("ApolloShop.Domain.Entities.Identity.User", "Sender")
@@ -1905,6 +2179,15 @@ namespace ApolloShop.Persistence.Migrations
                     b.Navigation("Sender");
 
                     b.Navigation("Ticket");
+                });
+
+            modelBuilder.Entity("ApolloShop.Domain.Entities.Tenancy.ShopSsoCode", b =>
+                {
+                    b.HasOne("ApolloShop.Domain.Entities.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ApolloShop.Domain.Entities.Catalog.Brand", b =>

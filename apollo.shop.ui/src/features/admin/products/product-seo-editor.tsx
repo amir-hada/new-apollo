@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toPersianDigits } from "@/features/auth/normalize-phone";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { cn } from "@/lib/utils";
 
 export type ProductSeoForm = {
@@ -177,7 +178,9 @@ export function ProductSeoEditor({
     "توضیح کوتاه و جذاب درباره محصول که در نتایج گوگل نمایش داده می‌شود.";
   const previewUrl =
     value.canonicalUrl.trim() || `https://${siteHost}${defaultPath}`;
-  const ogImage = value.ogImageUrl.trim() || primaryImageUrl || "";
+  const ogImage =
+    value.ogImageUrl.trim() ||
+    resolveProductImageUrl(primaryImageUrl);
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden pt-1 lg:grid-cols-2 lg:gap-3">

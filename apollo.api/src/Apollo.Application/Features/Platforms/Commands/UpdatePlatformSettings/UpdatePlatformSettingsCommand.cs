@@ -1,5 +1,6 @@
 using Apollo.Application.Abstractions.Platforms;
 using Apollo.Application.Common.Models;
+using Apollo.Domain.Helpers;
 using FluentValidation;
 using MediatR;
 
@@ -40,6 +41,9 @@ public sealed class UpdatePlatformSettingsCommandValidator
         RuleFor(command => command.Request.TemplateCode)
             .NotEmpty().WithMessage("قالب سایت الزامی است.")
             .MaximumLength(100).WithMessage("کد قالب نباید بیشتر از ۱۰۰ کاراکتر باشد.");
+
+        RuleFor(command => command.Request.Slug)
+            .MaximumLength(SiteSlug.MaxLength).WithMessage("آدرس سایت نباید بیشتر از ۶۳ کاراکتر باشد.");
     }
 }
 

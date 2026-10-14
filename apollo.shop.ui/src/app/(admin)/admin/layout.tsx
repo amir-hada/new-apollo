@@ -1,12 +1,36 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { Suspense } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { AdminShell } from "@/components/layout/AdminShell";
 import { AdminTopNav } from "@/components/layout/admin-top-nav";
 import { AuthGuard } from "@/components/shared/AuthGuard";
+import { SsoExchange } from "@/features/auth/SsoExchange";
 import { getAdminPageTitle } from "@/lib/admin-page-title";
 
+/**
+ * The Apollo platform redirects to `{adminUrl}?sso_code=...` (i.e. /admin).
+ * The user has no session yet, so skip AuthGuard and exchange the code first.
+ */
+function AdminSsoGate({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const search = useSearchParams();
+
+  if (pathname === "/admin/sso") return <>{children}</>;
+  if (pathname === "/admin" && search.get("sso_code")) return <SsoExchange />;
+
+  return <AdminLayoutContent>{children}</AdminLayoutContent>;
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={null}>
+      <AdminSsoGate>{children}</AdminSsoGate>
+    </Suspense>
+  );
+}
+
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isDashboard = pathname === "/admin" || pathname === "/admin/reports";
   const isChats = pathname.startsWith("/admin/chats");

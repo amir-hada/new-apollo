@@ -1,4 +1,5 @@
 using Apollo.Application.Features.Plans.Queries.GetPublicPlans;
+using Apollo.Domain.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,9 +19,11 @@ public sealed class PlansController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetPlans(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetPlans(
+        [FromQuery] PlanProductType? productType,
+        CancellationToken cancellationToken)
     {
-        var plans = await _sender.Send(new GetPublicPlansQuery(), cancellationToken);
+        var plans = await _sender.Send(new GetPublicPlansQuery(productType), cancellationToken);
         return Ok(plans);
     }
 }

@@ -14,7 +14,8 @@ public sealed record CreatePlanCommand(
     long? DiscountedPriceInToman,
     bool IsAvailable,
     bool AllowsInstallment,
-    string BillingPeriod) : IRequest<AdminPlanListItemDto>;
+    string BillingPeriod,
+    PlanProductType ProductType = PlanProductType.Shop) : IRequest<AdminPlanListItemDto>;
 
 public sealed class CreatePlanCommandValidator : AbstractValidator<CreatePlanCommand>
 {
@@ -44,6 +45,9 @@ public sealed class CreatePlanCommandValidator : AbstractValidator<CreatePlanCom
         RuleFor(command => command.BillingPeriod)
             .Must(period => PlanBillingPeriod.All.Contains(period, StringComparer.Ordinal))
             .WithMessage("بازه زمانی پلن معتبر نیست.");
+
+        RuleFor(command => command.ProductType)
+            .IsInEnum().WithMessage("نوع محصول پلن معتبر نیست.");
     }
 }
 
@@ -68,6 +72,7 @@ public sealed class CreatePlanCommandHandler : IRequestHandler<CreatePlanCommand
                 request.DiscountedPriceInToman,
                 request.IsAvailable,
                 request.AllowsInstallment,
-                request.BillingPeriod),
+                request.BillingPeriod,
+                request.ProductType),
             cancellationToken);
 }

@@ -18,7 +18,7 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(x => x.CreatedBy).HasMaxLength(256);
         builder.Property(x => x.UpdatedBy).HasMaxLength(256);
 
-        builder.HasIndex(x => x.Slug).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.Slug }).IsUnique();
 
         builder.HasOne(x => x.Parent)
             .WithMany(x => x.Children)
@@ -42,7 +42,7 @@ public class BrandConfiguration : IEntityTypeConfiguration<Brand>
         builder.Property(x => x.CreatedBy).HasMaxLength(256);
         builder.Property(x => x.UpdatedBy).HasMaxLength(256);
 
-        builder.HasIndex(x => x.Slug).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.Slug }).IsUnique();
     }
 }
 
@@ -73,9 +73,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.UpdatedBy).HasMaxLength(256);
         builder.Property(x => x.DeletedBy).HasMaxLength(256);
 
-        builder.HasIndex(x => x.Slug).IsUnique();
-        builder.HasIndex(x => x.ProductCode).IsUnique();
-        builder.HasIndex(x => x.Sku)
+        builder.HasIndex(x => new { x.TenantId, x.Slug }).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.ProductCode }).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.Sku })
             .IsUnique()
             .HasFilter("[Sku] IS NOT NULL AND [Sku] <> ''");
 
@@ -152,7 +152,7 @@ public class ProductAttributeConfiguration : IEntityTypeConfiguration<ProductAtt
         builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
         builder.Property(x => x.DisplayName).HasMaxLength(150).IsRequired();
 
-        builder.HasIndex(x => x.Name).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
 
         builder.HasMany(x => x.Values)
             .WithOne(x => x.Attribute)

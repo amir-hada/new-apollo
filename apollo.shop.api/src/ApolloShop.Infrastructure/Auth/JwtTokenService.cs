@@ -14,11 +14,13 @@ public class JwtTokenService : IJwtTokenService
 {
     private readonly JwtOptions _options;
     private readonly IDateTimeProvider _clock;
+    private readonly ITenantContext _tenantContext;
 
-    public JwtTokenService(IOptions<JwtOptions> options, IDateTimeProvider clock)
+    public JwtTokenService(IOptions<JwtOptions> options, IDateTimeProvider clock, ITenantContext tenantContext)
     {
         _options = options.Value;
         _clock = clock;
+        _tenantContext = tenantContext;
     }
 
     public (string Token, DateTime ExpiresAtUtc) CreateAccessToken(
@@ -37,6 +39,12 @@ public class JwtTokenService : IJwtTokenService
             new(ClaimTypes.Surname, user.LastName),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        claims.Add(new Claim(TenantClaimTypes.TenantId, user.TenantId.ToString()));
+        if (_tenantContext.IsResolved && _tenantContext.TenantId == user.TenantId && !string.IsNullOrEmpty(_tenantContext.Slug))
+        {
+            claims.Add(new Claim(TenantClaimTypes.TenantSlug, _tenantContext.Slug));
+        }
 
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
         claims.AddRange(permissions.Select(p => new Claim("permission", p)));

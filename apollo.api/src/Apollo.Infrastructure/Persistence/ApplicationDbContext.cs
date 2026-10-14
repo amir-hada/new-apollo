@@ -1,3 +1,4 @@
+using Apollo.Domain.Constants;
 using Apollo.Infrastructure.Identity;
 using Apollo.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -117,6 +118,11 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Id
             entity.Property(plan => plan.BillingPeriod).HasMaxLength(20).IsRequired();
             entity.Property(plan => plan.IsAvailable).HasDefaultValue(true);
             entity.Property(plan => plan.IsPublished).HasDefaultValue(false);
+            entity.Property(plan => plan.ProductType)
+                .HasConversion<int>()
+                .HasDefaultValue(PlanProductType.Shop)
+                .HasSentinel((PlanProductType)0);
+            entity.HasIndex(plan => plan.ProductType);
             entity.HasIndex(plan => plan.Name);
             entity.HasIndex(plan => new { plan.IsAvailable, plan.BillingPeriod });
             entity.HasIndex(plan => plan.IsPublished);
@@ -155,6 +161,18 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Id
             entity.Property(platform => platform.Name).HasMaxLength(200).IsRequired();
             entity.HasIndex(platform => platform.UserId);
             entity.HasIndex(platform => new { platform.UserId, platform.Name });
+            entity.Property(platform => platform.TenantSlug).HasMaxLength(64);
+            entity.Property(platform => platform.StorefrontUrl).HasMaxLength(500);
+            entity.Property(platform => platform.AdminUrl).HasMaxLength(500);
+            entity.Property(platform => platform.TenantAdminEmail).HasMaxLength(256);
+            entity.Property(platform => platform.ProvisioningError).HasMaxLength(1000);
+            entity.Property(platform => platform.ProvisioningStatus)
+                .HasConversion<int>()
+                .HasDefaultValue(SiteProvisioningStatus.Pending);
+            entity.HasIndex(platform => platform.TenantSlug)
+                .IsUnique()
+                .HasFilter("[TenantSlug] IS NOT NULL");
+            entity.HasIndex(platform => platform.TenantId);
             entity.HasOne(platform => platform.Plan)
                 .WithMany()
                 .HasForeignKey(platform => platform.PlanId)
@@ -174,6 +192,10 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Id
             entity.Property(item => item.AdminUsername).HasMaxLength(100).IsRequired();
             entity.Property(item => item.AdminPassword).HasMaxLength(200).IsRequired();
             entity.Property(item => item.TemplateCode).HasMaxLength(100).IsRequired();
+            entity.Property(item => item.Slug).HasMaxLength(64);
+            entity.HasIndex(item => item.Slug)
+                .IsUnique()
+                .HasFilter("[Slug] IS NOT NULL");
             entity.HasIndex(item => item.PlatformId).IsUnique();
             entity.HasOne(item => item.Platform)
                 .WithOne(platform => platform.Configuration)

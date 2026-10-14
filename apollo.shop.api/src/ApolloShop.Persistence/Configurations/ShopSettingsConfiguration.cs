@@ -27,5 +27,7 @@ public class ShopSettingsConfiguration : IEntityTypeConfiguration<ShopSettings>
         builder.Property(x => x.HomeStoriesJson).HasColumnType("nvarchar(max)");
         builder.Property(x => x.CreatedBy).HasMaxLength(256);
         builder.Property(x => x.UpdatedBy).HasMaxLength(256);
+
+        builder.HasIndex(x => x.TenantId).IsUnique();
     }
 }

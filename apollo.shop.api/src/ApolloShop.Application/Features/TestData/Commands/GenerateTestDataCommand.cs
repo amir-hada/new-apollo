@@ -246,8 +246,7 @@ public sealed class GenerateTestDataCommandHandler : IRequestHandler<GenerateTes
 
     private async Task<int> NextNumericProductCodeAsync(CancellationToken cancellationToken)
     {
-        var codes = await _db.Products
-            .IgnoreQueryFilters()
+        var codes = await _db.ProductsIncludingDeleted
             .Select(p => p.ProductCode)
             .ToListAsync(cancellationToken);
 

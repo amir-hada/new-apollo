@@ -114,6 +114,8 @@ export interface ProductListItem {
   categoryName?: string | null;
   primaryImageUrl?: string | null;
   stockQuantity: number;
+  averageRating?: number | null;
+  ratingCount?: number;
   totalSales?: number;
   totalRevenue?: number;
   revenueTrend?: number[];
@@ -126,8 +128,10 @@ export interface ProductDetail {
   description: string;
   brandId?: string | null;
   brandName?: string | null;
+  brandSlug?: string | null;
   categoryId?: string | null;
   categoryName?: string | null;
+  categorySlug?: string | null;
   isAvailable: boolean;
   status: ProductStatus;
   productCode: string;
@@ -156,6 +160,17 @@ export interface ProductDetail {
   specs: ProductSpec[];
   /** Read-only for cart; managed via product stock/price/sku */
   variants: ProductVariant[];
+  averageRating?: number | null;
+  ratingCount?: number;
+  commentCount?: number;
+}
+
+export interface ProductCommentItem {
+  id: string;
+  body: string;
+  rating?: number | null;
+  createdAtUtc: string;
+  authorName: string;
 }
 
 export interface CreateProductRequest {
@@ -576,6 +591,37 @@ export interface VerifyPaymentResult {
   trackingCode?: string | null;
 }
 
+export interface SearchSuggestProduct {
+  id: string;
+  name: string;
+  slug: string;
+  brandName?: string | null;
+  categoryName?: string | null;
+  price: number;
+  imageUrl?: string | null;
+}
+
+export interface SearchSuggestBrand {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl?: string | null;
+}
+
+export interface SearchSuggestCategory {
+  id: string;
+  name: string;
+  slug: string;
+  parentName?: string | null;
+}
+
+export interface SearchSuggestResult {
+  query: string;
+  products: SearchSuggestProduct[];
+  brands: SearchSuggestBrand[];
+  categories: SearchSuggestCategory[];
+}
+
 export interface HeroBanner {
   id: string;
   imageUrl: string;
@@ -627,4 +673,31 @@ export interface UploadFileResult {
   fileName: string;
   contentType: string;
   size: number;
+}
+
+export interface TenantDto {
+  id: string;
+  slug: string;
+  name: string;
+  customDomain: string | null;
+  isActive: boolean;
+  createdAtUtc: string;
+}
+
+export interface CreateTenantRequest {
+  slug: string;
+  name: string;
+  adminEmail: string;
+  adminPassword: string;
+  adminFirstName: string;
+  adminLastName: string;
+  shopTitle?: string | null;
+  primaryColor?: string | null;
+}
+
+export interface CreateTenantResult {
+  tenantId: string;
+  slug: string;
+  name: string;
+  adminEmail: string;
 }

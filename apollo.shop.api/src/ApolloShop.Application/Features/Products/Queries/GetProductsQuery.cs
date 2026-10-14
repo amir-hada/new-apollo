@@ -69,7 +69,9 @@ public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, PagedRe
                 p.Name.ToLower().Contains(s) ||
                 p.Slug.ToLower().Contains(s) ||
                 p.ProductCode.Contains(s) ||
-                (p.Sku != null && p.Sku.ToLower().Contains(s)));
+                (p.Sku != null && p.Sku.ToLower().Contains(s)) ||
+                (p.Brand != null && p.Brand.Name.ToLower().Contains(s)) ||
+                (p.Category != null && p.Category.Name.ToLower().Contains(s)));
         }
 
         if (request.MinPrice is not null)
@@ -126,7 +128,13 @@ public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, PagedRe
                         .Select(i => i.ImagePath).FirstOrDefault()
                     ?? p.Images.Where(i => i.MediaKind == ProductMediaKind.Image)
                         .OrderBy(i => i.SortOrder).Select(i => i.ImagePath).FirstOrDefault(),
-                p.StockQuantity))
+                p.StockQuantity,
+                _db.ProductComments
+                    .Where(c => c.ProductId == p.Id && c.IsApproved && c.Rating != null)
+                    .Select(c => (double?)c.Rating)
+                    .Average(),
+                _db.ProductComments
+                    .Count(c => c.ProductId == p.Id && c.IsApproved && c.Rating != null)))
             .ToListAsync(cancellationToken);
 
         if (request.Admin && items.Count > 0)

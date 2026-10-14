@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { AuthGuard } from "@/components/shared/AuthGuard";
+import { useAuthStore } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -16,6 +18,8 @@ const links = [
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const clearSession = useAuthStore((s) => s.clearSession);
 
   return (
     <AuthGuard>
@@ -35,6 +39,17 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                 {l.label}
               </Link>
             ))}
+            <button
+              type="button"
+              className="mt-2 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-start text-sm text-destructive hover:bg-muted"
+              onClick={() => {
+                clearSession();
+                router.push("/");
+              }}
+            >
+              <LogOut className="size-4 shrink-0" />
+              خروج از حساب
+            </button>
           </nav>
         </aside>
         <div>{children}</div>

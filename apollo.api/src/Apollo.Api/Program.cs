@@ -76,6 +76,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 await IdentityDataSeeder.SeedAsync(app.Services);
+await PlanDataSeeder.SeedAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {

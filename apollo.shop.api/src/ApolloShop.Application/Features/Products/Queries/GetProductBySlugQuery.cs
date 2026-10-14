@@ -25,6 +25,6 @@ public class GetProductBySlugQueryHandler : IRequestHandler<GetProductBySlugQuer
             throw new NotFoundException("Product", request.Slug);
         }
 
-        return ProductMapper.ToDetail(product);
+        return await ProductMapper.ToDetailAsync(_db, product, cancellationToken);
     }
 }

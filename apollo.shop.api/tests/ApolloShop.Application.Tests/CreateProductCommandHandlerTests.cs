@@ -3,8 +3,10 @@ using ApolloShop.Application.Features.Products.Commands;
 using ApolloShop.Application.Features.Products.DTOs;
 using ApolloShop.Domain.Enums;
 using ApolloShop.Domain.Exceptions;
+using ApolloShop.Domain.Tenancy;
 using ApolloShop.Persistence;
 using ApolloShop.Persistence.Interceptors;
+using ApolloShop.Persistence.Tenancy;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -19,7 +21,10 @@ public class CreateProductCommandHandlerTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
-        return new ApplicationDbContext(options, new AuditableEntityInterceptor());
+        var tenantContext = new TenantContext();
+        tenantContext.Set(TenantIds.Default, TenantIds.DefaultSlug);
+
+        return new ApplicationDbContext(options, new AuditableEntityInterceptor(), tenantContext);
     }
 
     private static CreateProductRequest Request(

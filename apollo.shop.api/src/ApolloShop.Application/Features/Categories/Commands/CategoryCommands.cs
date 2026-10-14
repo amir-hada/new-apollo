@@ -93,13 +93,12 @@ public class DeleteCategoryCommandHandler : IRequestHandler<DeleteCategoryComman
             throw new ConflictException("Category has child categories.");
         }
 
-        if (await _db.Products.IgnoreQueryFilters().AnyAsync(p => p.CategoryId == entity.Id && !p.IsDeleted, cancellationToken))
+        if (await _db.ProductsIncludingDeleted.AnyAsync(p => p.CategoryId == entity.Id && !p.IsDeleted, cancellationToken))
         {
             throw new ConflictException("Category is assigned to products.");
         }
 
-        var softDeleted = await _db.Products
-            .IgnoreQueryFilters()
+        var softDeleted = await _db.ProductsIncludingDeleted
             .Where(p => p.CategoryId == entity.Id && p.IsDeleted)
             .ToListAsync(cancellationToken);
         foreach (var product in softDeleted)

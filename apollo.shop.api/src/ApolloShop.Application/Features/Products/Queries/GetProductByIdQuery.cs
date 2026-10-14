@@ -18,6 +18,6 @@ public class GetProductByIdQueryHandler : IRequestHandler<GetProductByIdQuery, P
         var product = await ProductMapper.LoadAsync(_db, request.Id.ToString(), bySlug: false, cancellationToken)
             ?? throw new NotFoundException("Product", request.Id);
 
-        return ProductMapper.ToDetail(product);
+        return await ProductMapper.ToDetailAsync(_db, product, cancellationToken);
     }
 }

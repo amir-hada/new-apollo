@@ -3,13 +3,21 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { ProductCard, ProductGrid } from "@/components/product/ProductCard";
 import { AmazingOffers } from "@/features/home/AmazingOffers";
+import { HomeProductCarousel } from "@/features/home/HomeProductCarousel";
 import { HomeStories } from "@/features/home/HomeStories";
 import { useShopSettings } from "@/lib/shop-settings-api";
 import { useSiteSettings } from "@/lib/use-site-settings";
 import { cn } from "@/lib/utils";
 import type { HeroBanner, ProductListItem } from "@/types/api";
+
+export type HomeCarouselRow = {
+  key: string;
+  title: string;
+  subtitle?: string;
+  href: string;
+  products: ProductListItem[];
+};
 
 function HeroBannerSlider({ banners }: { banners: HeroBanner[] }) {
   const [index, setIndex] = useState(0);
@@ -116,9 +124,11 @@ function HeroBannerSlider({ banners }: { banners: HeroBanner[] }) {
 export function HomeHero({
   products,
   amazingProducts = [],
+  carousels = [],
 }: {
   products: ProductListItem[];
   amazingProducts?: ProductListItem[];
+  carousels?: HomeCarouselRow[];
 }) {
   const { settings } = useSiteSettings();
   const { data: shop } = useShopSettings();
@@ -132,30 +142,22 @@ export function HomeHero({
       <HomeStories stories={stories} />
       <AmazingOffers products={amazingProducts} />
 
-      <section className="bg-background">
-        <div className="mx-auto w-full max-w-[1600px] px-3 py-10 sm:px-4 sm:py-12 lg:px-5">
-          <div className="mb-5 flex items-end justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold sm:text-2xl">{home.featuredTitle}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{home.featuredSubtitle}</p>
-            </div>
-            <Link href="/products" className="text-sm text-primary hover:underline">
-              همه محصولات
-            </Link>
-          </div>
-          {products.length ? (
-            <ProductGrid>
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </ProductGrid>
-          ) : (
-            <div className="rounded-xl border border-dashed border-border bg-background px-6 py-12 text-center text-sm text-muted-foreground">
-              هنوز محصولی برای نمایش وجود ندارد. API را اجرا کنید تا داده‌ها بارگذاری شوند.
-            </div>
-          )}
-        </div>
-      </section>
+      <HomeProductCarousel
+        title={home.featuredTitle}
+        subtitle={home.featuredSubtitle}
+        href="/products?sort=featured"
+        products={products}
+      />
+
+      {carousels.map((row) => (
+        <HomeProductCarousel
+          key={row.key}
+          title={row.title}
+          subtitle={row.subtitle}
+          href={row.href}
+          products={row.products}
+        />
+      ))}
     </div>
   );
 }

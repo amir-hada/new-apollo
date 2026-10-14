@@ -11,15 +11,20 @@ public record UpdateHeroBannersCommand(UpdateHeroBannersRequest Request) : IRequ
 public class UpdateHeroBannersCommandHandler : IRequestHandler<UpdateHeroBannersCommand, ShopSettingsDto>
 {
     private readonly IApplicationDbContext _db;
+    private readonly ITenantContext _tenant;
 
-    public UpdateHeroBannersCommandHandler(IApplicationDbContext db) => _db = db;
+    public UpdateHeroBannersCommandHandler(IApplicationDbContext db, ITenantContext tenant)
+    {
+        _db = db;
+        _tenant = tenant;
+    }
 
     public async Task<ShopSettingsDto> Handle(UpdateHeroBannersCommand request, CancellationToken cancellationToken)
     {
         var settings = await _db.ShopSettings.FirstOrDefaultAsync(cancellationToken);
         if (settings is null)
         {
-            settings = GetShopSettingsQueryHandler.CreateDefault();
+            settings = GetShopSettingsQueryHandler.CreateDefault(_tenant.TenantId);
             _db.ShopSettings.Add(settings);
         }
 

@@ -28,6 +28,11 @@ import { ApiError } from "@/lib/api/client"
 import { platformsApi } from "@/lib/api/platforms-api"
 import type { PlanOption } from "@/lib/api/platform-types"
 import { dashboardToast } from "@/lib/dashboard-toast"
+import {
+  buildSlugPreview,
+  sanitizeSlugInput,
+  validateSlug,
+} from "@/lib/site-slug"
 import { cn } from "@/lib/utils"
 
 type PlatformCreateDialogProps = {
@@ -39,6 +44,7 @@ type PlatformCreateDialogProps = {
 type FieldErrors = {
   planId?: string
   name?: string
+  slug?: string
 }
 
 function formatPrice(value: number) {
@@ -178,6 +184,7 @@ export function PlatformCreateDialog({
   const [planOptions, setPlanOptions] = React.useState<PlanOption[]>([])
   const [planId, setPlanId] = React.useState<string | null>(null)
   const [name, setName] = React.useState("")
+  const [slug, setSlug] = React.useState("")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({})
@@ -185,6 +192,7 @@ export function PlatformCreateDialog({
   const resetForm = React.useCallback(() => {
     setPlanId(null)
     setName("")
+    setSlug("")
     setFormError(null)
     setFieldErrors({})
   }, [])
@@ -197,7 +205,11 @@ export function PlatformCreateDialog({
     void platformsApi
       .getPlanOptions()
       .then((options) => {
-        if (!cancelled) setPlanOptions(options)
+        if (!cancelled) {
+          setPlanOptions(
+            options.filter((option) => (option.productType ?? "Shop") === "Shop")
+          )
+        }
       })
       .catch(() => {
         if (!cancelled) setPlanOptions([])
@@ -222,6 +234,8 @@ export function PlatformCreateDialog({
     const errors: FieldErrors = {}
     if (!planId) errors.planId = "پلن را انتخاب کنید."
     if (!name.trim()) errors.name = "نام پلتفرم الزامی است."
+    const slugError = validateSlug(slug)
+    if (slugError) errors.slug = slugError
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -240,6 +254,7 @@ export function PlatformCreateDialog({
       await platformsApi.createPlatform({
         planId,
         name: name.trim(),
+        slug: slug.trim(),
       })
       dashboardToast.success("پلتفرم با موفقیت ایجاد شد.")
       resetForm()
@@ -311,6 +326,35 @@ export function PlatformCreateDialog({
               }}
               disabled={isSubmitting}
               error={fieldErrors.name}
+            />
+
+            <FormFloatingField
+              id="platform-slug"
+              label="آدرس سایت (slug)"
+              required
+              dir="ltr"
+              className="text-start"
+              autoComplete="off"
+              value={slug}
+              onChange={(event) => {
+                setSlug(sanitizeSlugInput(event.target.value))
+                if (fieldErrors.slug) {
+                  setFieldErrors((current) => ({
+                    ...current,
+                    slug: undefined,
+                  }))
+                }
+              }}
+              disabled={isSubmitting}
+              error={fieldErrors.slug}
+              footer={
+                <p
+                  dir="ltr"
+                  className="px-1 text-start text-[11px] font-light text-muted-foreground"
+                >
+                  {buildSlugPreview(slug)}
+                </p>
+              }
             />
 
             <PlatformPlanSelect

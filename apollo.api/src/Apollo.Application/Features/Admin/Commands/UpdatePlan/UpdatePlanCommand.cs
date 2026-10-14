@@ -18,7 +18,8 @@ public sealed record UpdatePlanCommand(
     bool IsPublished,
     string BillingPeriod,
     IReadOnlyList<PlanPropertyDto> Properties,
-    IReadOnlyList<PlanTemplateDto> Templates) : IRequest<AdminPlanListItemDto>;
+    IReadOnlyList<PlanTemplateDto> Templates,
+    PlanProductType ProductType = PlanProductType.Shop) : IRequest<AdminPlanListItemDto>;
 
 public sealed class UpdatePlanCommandValidator : AbstractValidator<UpdatePlanCommand>
 {
@@ -51,6 +52,9 @@ public sealed class UpdatePlanCommandValidator : AbstractValidator<UpdatePlanCom
         RuleFor(command => command.BillingPeriod)
             .Must(period => PlanBillingPeriod.All.Contains(period, StringComparer.Ordinal))
             .WithMessage("بازه زمانی پلن معتبر نیست.");
+
+        RuleFor(command => command.ProductType)
+            .IsInEnum().WithMessage("نوع محصول پلن معتبر نیست.");
 
         RuleFor(command => command.Properties)
             .NotNull().WithMessage("ویژگی‌های پلن الزامی است.");
@@ -111,6 +115,7 @@ public sealed class UpdatePlanCommandHandler : IRequestHandler<UpdatePlanCommand
                 request.IsPublished,
                 request.BillingPeriod,
                 request.Properties,
-                request.Templates),
+                request.Templates,
+                request.ProductType),
             cancellationToken);
 }

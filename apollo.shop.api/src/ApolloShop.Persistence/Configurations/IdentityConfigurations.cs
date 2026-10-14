@@ -23,8 +23,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.DeletedBy).HasMaxLength(256);
         builder.Property(x => x.PasswordResetToken).HasMaxLength(128);
 
-        builder.HasIndex(x => x.Email).IsUnique();
-        builder.HasIndex(x => x.PhoneNumber)
+        builder.HasIndex(x => new { x.TenantId, x.Email }).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.PhoneNumber })
             .IsUnique()
             .HasFilter("[PhoneNumber] IS NOT NULL");
 

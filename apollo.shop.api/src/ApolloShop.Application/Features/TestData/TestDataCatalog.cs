@@ -336,6 +336,11 @@ public static class TestDataCatalog
         string[] blogImages) =>
         new(key, title, description, brands, categories, products, blogs, productImages, blogImages);
 
-    private static string[] ProductImgs(params string[] urls) => urls;
+    /// <summary>تصویر پیش‌فرض محصولات تستی (فایل public فرانت).</summary>
+    public const string DefaultProductImagePath = "/product-default.jpg";
+
+    private static string[] ProductImgs(params string[] urls) =>
+        [DefaultProductImagePath];
+
     private static string[] BlogImgs(params string[] urls) => urls;
 }

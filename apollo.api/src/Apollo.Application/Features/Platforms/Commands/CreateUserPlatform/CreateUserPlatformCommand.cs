@@ -1,5 +1,6 @@
 using Apollo.Application.Abstractions.Platforms;
 using Apollo.Application.Common.Models;
+using Apollo.Domain.Helpers;
 using FluentValidation;
 using MediatR;
 
@@ -23,6 +24,9 @@ public sealed class CreateUserPlatformCommandValidator
         RuleFor(command => command.Request.Name)
             .NotEmpty().WithMessage("نام پلتفرم الزامی است.")
             .MaximumLength(200).WithMessage("نام پلتفرم نباید بیشتر از ۲۰۰ کاراکتر باشد.");
+
+        RuleFor(command => command.Request.Slug)
+            .MaximumLength(SiteSlug.MaxLength).WithMessage("آدرس سایت نباید بیشتر از ۶۳ کاراکتر باشد.");
     }
 }
 

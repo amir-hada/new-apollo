@@ -54,6 +54,9 @@ export function PlatformsPage() {
         isLoading={isLoading}
         error={error}
         onDelete={requestDelete}
+        onRefresh={() => {
+          void loadPlatforms()
+        }}
       />
 
       {!isCreateDialogOpen ? (

@@ -2,8 +2,9 @@ using ApolloShop.Domain.Common;
 
 namespace ApolloShop.Domain.Entities.Identity;
 
-public class User : AuditableEntity, ISoftDeletable
+public class User : AuditableEntity, ISoftDeletable, ITenantScoped
 {
+    public Guid TenantId { get; set; }
     public string Email { get; set; } = string.Empty;
     public string? PhoneNumber { get; set; }
     public string PasswordHash { get; set; } = string.Empty;

@@ -5,6 +5,8 @@ export type PlanProperty = {
 
 export type PlanBillingPeriod = "Monthly" | "Yearly"
 
+export type PlanProductType = "Shop"
+
 export type PublicPlanListItem = {
   planId: string
   name: string
@@ -16,4 +18,5 @@ export type PublicPlanListItem = {
   allowsInstallment: boolean
   billingPeriod: PlanBillingPeriod
   properties: PlanProperty[]
+  productType?: PlanProductType
 }

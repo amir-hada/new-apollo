@@ -1,5 +1,6 @@
 using ApolloShop.Application.Abstractions;
 using ApolloShop.Persistence.Interceptors;
+using ApolloShop.Persistence.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +14,7 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         services.AddSingleton<AuditableEntityInterceptor>();
+        services.AddScoped<ITenantContext, TenantContext>();
 
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {

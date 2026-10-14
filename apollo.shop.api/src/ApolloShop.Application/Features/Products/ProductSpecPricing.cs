@@ -77,8 +77,8 @@ internal static class ProductSpecPricing
     public static decimal UnitPriceWithOptions(Product product, IReadOnlyList<SelectedSpecOptionSnapshot> options) =>
         SellingPrice(product) + options.Sum(o => o.PriceAdjustment);
 
-    public static string Serialize(IReadOnlyList<SelectedSpecOptionSnapshot> options) =>
-        JsonSerializer.Serialize(options, JsonOptions);
+    public static string? Serialize(IReadOnlyList<SelectedSpecOptionSnapshot> options) =>
+        options.Count == 0 ? null : JsonSerializer.Serialize(options, JsonOptions);
 
     public static IReadOnlyList<SelectedSpecOptionSnapshot> Deserialize(string? json)
     {

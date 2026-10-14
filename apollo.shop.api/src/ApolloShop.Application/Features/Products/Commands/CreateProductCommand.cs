@@ -29,7 +29,7 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
         {
             throw new ValidationException("Slug", "Product slug is required.");
         }
-        if (await _db.Products.IgnoreQueryFilters().AnyAsync(p => p.Slug == slug, cancellationToken))
+        if (await _db.ProductsIncludingDeleted.AnyAsync(p => p.Slug == slug, cancellationToken))
         {
             throw new ConflictException("Product slug already exists.");
         }
@@ -39,7 +39,7 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
         var sku = string.IsNullOrWhiteSpace(r.Sku) ? null : r.Sku.Trim();
 
         if (sku is not null
-            && await _db.Products.IgnoreQueryFilters().AnyAsync(p => p.Sku == sku, cancellationToken))
+            && await _db.ProductsIncludingDeleted.AnyAsync(p => p.Sku == sku, cancellationToken))
         {
             throw new ConflictException("Product SKU already exists.");
         }

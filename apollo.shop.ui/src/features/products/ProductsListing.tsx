@@ -202,12 +202,14 @@ function ProductsListingContent({
   const searchParams = useSearchParams();
   const urlSearch = searchParams.get("search") ?? "";
   const urlCategory = routeCategorySlug ?? searchParams.get("category") ?? "";
+  const urlBrand = searchParams.get("brand") ?? "";
   const shopSettings = useShopSettings();
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState(urlSearch);
   const [q, setQ] = useState(urlSearch);
   const [categorySlug, setCategorySlug] = useState(urlCategory);
+  const [brandSlug, setBrandSlug] = useState(urlBrand);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [sort, setSort] = useState("relevant");
@@ -217,12 +219,13 @@ function ProductsListingContent({
     setSearch(urlSearch);
     setQ(urlSearch);
     setCategorySlug(urlCategory);
+    setBrandSlug(urlBrand);
     setPage(1);
-  }, [urlSearch, urlCategory]);
+  }, [urlSearch, urlCategory, urlBrand]);
 
   const queryKey = useMemo(
-    () => ["products", page, q, categorySlug, minPrice, maxPrice, sort],
-    [page, q, categorySlug, minPrice, maxPrice, sort],
+    () => ["products", page, q, categorySlug, brandSlug, minPrice, maxPrice, sort],
+    [page, q, categorySlug, brandSlug, minPrice, maxPrice, sort],
   );
 
   const categories = useQuery({
@@ -239,6 +242,7 @@ function ProductsListingContent({
           pageSize: 24,
           search: q || undefined,
           categorySlug: categorySlug || undefined,
+          brand: brandSlug || undefined,
           minPrice: minPrice || undefined,
           maxPrice: maxPrice || undefined,
           sort,
@@ -288,6 +292,7 @@ function ProductsListingContent({
     setMaxPrice("");
     setSort("relevant");
     setPage(1);
+    setBrandSlug("");
     if (routeCategorySlug !== undefined) {
       setCategorySlug(routeCategorySlug);
       return;
@@ -301,6 +306,7 @@ function ProductsListingContent({
 
   const hasActiveFilters = Boolean(
     q ||
+      brandSlug ||
       minPrice ||
       maxPrice ||
       (routeCategorySlug === undefined && categorySlug),

@@ -95,7 +95,7 @@ export function CategoriesTable({
     >
       <CategoriesToolbar table={table} onAdd={onAdd} />
 
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
+      <div className="overflow-x-auto rounded-lg border border-border bg-card">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>

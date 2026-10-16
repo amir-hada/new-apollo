@@ -1,5 +1,6 @@
 using Apollo.Application.Abstractions.Identity;
 using Apollo.Application.Abstractions.Notifications;
+using Apollo.Application.Abstractions.Sms;
 using Apollo.Application.Abstractions.Storage;
 using Apollo.Application.Common.Exceptions;
 using Apollo.Application.Common.Models;
@@ -23,6 +24,7 @@ public sealed class UserAccountService : IUserAccountService
     private readonly IWebHostEnvironment _environment;
     private readonly IFileAccessService _fileAccessService;
     private readonly INotificationService _notificationService;
+    private readonly ISmsSender _smsSender;
     private readonly ILogger<UserAccountService> _logger;
 
     public UserAccountService(
@@ -33,6 +35,7 @@ public sealed class UserAccountService : IUserAccountService
         IWebHostEnvironment environment,
         IFileAccessService fileAccessService,
         INotificationService notificationService,
+        ISmsSender smsSender,
         ILogger<UserAccountService> logger)
     {
         _userManager = userManager;
@@ -42,6 +45,7 @@ public sealed class UserAccountService : IUserAccountService
         _environment = environment;
         _fileAccessService = fileAccessService;
         _notificationService = notificationService;
+        _smsSender = smsSender;
         _logger = logger;
     }
 
@@ -180,11 +184,21 @@ public sealed class UserAccountService : IUserAccountService
         _dbContext.PhoneOtps.Add(otp);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("OTP for {MobileNumber}: {Code}", normalizedMobile, code);
+        try
+        {
+            await _smsSender.SendOtpAsync(normalizedMobile, code, cancellationToken);
+            _logger.LogInformation("OTP sent to {MobileNumber}", normalizedMobile);
+        }
+        catch (ValidationException) when (_environment.IsDevelopment())
+        {
+            // Allow local auth testing before SMS.ir credentials are configured.
+            _logger.LogWarning(
+                "SMS panel is not ready; OTP for {MobileNumber} is {Code}",
+                normalizedMobile,
+                code);
+        }
 
-        return new SendOtpResponse(
-            "کد تأیید ارسال شد.",
-            _environment.IsDevelopment() ? code : null);
+        return new SendOtpResponse("کد تأیید ارسال شد.", DebugCode: null);
     }
 
     public async Task<AuthResponse> VerifyPhoneAsync(
@@ -368,9 +382,17 @@ public sealed class UserAccountService : IUserAccountService
     {
         var normalizedCode = code.Trim();
 
-        if (string.Equals(normalizedCode, ValidationRules.MasterOtpCode, StringComparison.Ordinal))
+        // Dev-only bypass when SMS panel is not yet configured.
+        if (_environment.IsDevelopment() &&
+            string.Equals(normalizedCode, ValidationRules.MasterOtpCode, StringComparison.Ordinal))
         {
-            return;
+            var smsEnabled = await _dbContext.PlatformSmsSettings
+                .AsNoTracking()
+                .AnyAsync(s => s.IsEnabled && s.ApiKey != "", cancellationToken);
+            if (!smsEnabled)
+            {
+                return;
+            }
         }
 
         var otp = await _dbContext.PhoneOtps

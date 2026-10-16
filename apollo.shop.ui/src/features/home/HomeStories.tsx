@@ -162,10 +162,10 @@ export function HomeStories({ stories }: { stories: HomeStory[] }) {
 
   return (
     <>
-      <section className="w-full px-[5px] pt-3 sm:pt-4">
+      <section className="w-full px-3 pt-3 sm:px-4 sm:pt-4">
         <div
           className={cn(
-            "flex gap-3 overflow-x-auto px-1 pb-1 sm:gap-4",
+            "flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 sm:gap-4",
             "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           )}
         >
@@ -174,7 +174,7 @@ export function HomeStories({ stories }: { stories: HomeStory[] }) {
               key={story.id}
               type="button"
               onClick={() => setOpenIndex(index)}
-              className="flex w-[72px] shrink-0 flex-col items-center gap-1.5 sm:w-[80px]"
+              className="flex w-[72px] shrink-0 snap-start flex-col items-center gap-1.5 sm:w-[80px]"
             >
               <span className="rounded-full bg-[linear-gradient(135deg,var(--primary),color-mix(in_oklab,var(--primary)_55%,#f59e0b))] p-[2.5px]">
                 <span className="block rounded-full bg-background p-[2px]">

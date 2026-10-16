@@ -20,6 +20,13 @@ import {
   UsersRound,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AppearanceForm } from "@/features/admin/settings/appearance-form";
 import { ApplicationForm } from "@/features/admin/settings/application-form";
 import { DisplayForm } from "@/features/admin/settings/display-form";
@@ -95,8 +102,8 @@ const TABS = [
   },
   {
     id: "sms",
-    title: "پیامک",
-    desc: "سرویس و قالب‌های پیامک.",
+    title: "پنل پیامکی",
+    desc: "روشن/خاموش کردن OTP و پیامک سفارش.",
     icon: MessageSquareText,
   },
   {
@@ -253,31 +260,25 @@ export function AdminSettings() {
       </aside>
 
       <div className="min-w-0 flex-1 overflow-x-hidden px-4 py-4 sm:px-5">
-        <nav
-          aria-label="بخش‌های تنظیمات"
-          className="mb-4 flex gap-1 overflow-x-auto no-scrollbar pb-1 lg:hidden"
-        >
-          {TABS.map((item) => {
-            const Icon = item.icon;
-            const selected = item.id === tab;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => selectTab(item.id)}
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
-                  selected
-                    ? "bg-primary/10 font-medium text-primary"
-                    : "text-muted-foreground hover:bg-primary/5 hover:text-foreground",
-                )}
-              >
-                <Icon className="size-4 shrink-0 text-primary" />
-                {item.title}
-              </button>
-            );
-          })}
-        </nav>
+        <div className="mb-4 lg:hidden">
+          <label htmlFor="settings-tab" className="sr-only">
+            بخش تنظیمات
+          </label>
+          <Select value={tab} onValueChange={(v) => v && isTabId(v) && selectTab(v)}>
+            <SelectTrigger id="settings-tab" className="h-11 w-full min-w-0 justify-between">
+              <SelectValue placeholder="انتخاب بخش">
+                {TABS.find((t) => t.id === tab)?.title}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {TABS.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <div key={tab} className="animate-tab-enter">
           <div className="mb-3">

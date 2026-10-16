@@ -1,13 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import {
+  type MouseEvent as ReactMouseEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   ChartColumn,
   Check,
   ChevronLeft,
+  ChevronRight,
   Clock3,
   GitCompare,
   Heart,
@@ -22,6 +28,8 @@ import {
   Star,
   Trash2,
   Truck,
+  X,
+  ZoomIn,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -33,10 +41,16 @@ import { useCartStore } from "@/lib/cart-store";
 import { resolveProductImageUrl } from "@/lib/product-image";
 import { getProductDisplayPrices } from "@/lib/product-price";
 import {
+  isLightSwatch,
+  resolveSwatchColor,
+} from "@/lib/product-color";
+import {
   formatPrice,
   normalizeShopCurrency,
   toDisplayAmount,
 } from "@/lib/shop-currency";
+import { getShopIndustryPreset } from "@/lib/shop-industry-presets";
+import { useShopSettings } from "@/lib/shop-settings-api";
 import { cn } from "@/lib/utils";
 import type { Cart, ProductDetail, ProductSpec } from "@/types/api";
 
@@ -95,6 +109,11 @@ export function ProductDetailView({
   product,
   currency,
 }: ProductDetailViewProps) {
+  const { data: shopSettings } = useShopSettings();
+  const industry = useMemo(
+    () => getShopIndustryPreset(shopSettings?.industryKey),
+    [shopSettings?.industryKey],
+  );
   const images = useMemo(() => {
     const list = product.images
       .filter((i) => isImageMedia(i))
@@ -110,8 +129,47 @@ export function ProductDetailView({
   const [tab, setTab] = useState<"desc" | "specs" | "reviews">("desc");
   const [descExpanded, setDescExpanded] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [zoomActive, setZoomActive] = useState(false);
+  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const offerEnd = useMemo(() => endOfToday(), []);
   const { hours, minutes, seconds, finished } = useCountdown(offerEnd);
+  const activeSrc = images[activeImage] ?? images[0];
+  const ZOOM_SCALE = 1.55;
+
+  const updateZoomFromEvent = (e: ReactMouseEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoomPos({
+      x: Math.min(100, Math.max(0, x)),
+      y: Math.min(100, Math.max(0, y)),
+    });
+  };
+
+  const goLightbox = (dir: -1 | 1) => {
+    if (images.length <= 1) return;
+    setActiveImage((i) => (i + dir + images.length) % images.length);
+  };
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") setLightboxOpen(false);
+      if (ev.key === "ArrowLeft") goLightbox(1);
+      if (ev.key === "ArrowRight") goLightbox(-1);
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only bind while open
+  }, [lightboxOpen, images.length]);
 
   const activeVariants = useMemo(
     () => product.variants.filter((v) => v.isActive),
@@ -120,7 +178,7 @@ export function ProductDetailView({
   const selected = activeVariants[0];
   const params = useMemo(() => orderParamSpecs(product), [product]);
   const featureSpecs = useMemo(
-    () => displaySpecs(product).slice(0, 4),
+    () => displaySpecs(product).slice(0, 6),
     [product],
   );
   const allDisplaySpecs = useMemo(() => displaySpecs(product), [product]);
@@ -279,6 +337,11 @@ export function ProductDetailView({
     updateMutation.isPending ||
     removeMutation.isPending;
   const currencyUnit = normalizeShopCurrency(currency);
+  const avg = product.averageRating ?? 0;
+  const rated = product.ratingCount ?? 0;
+  const comments = product.commentCount ?? 0;
+  const avgLabel =
+    avg > 0 ? toPersianDigits(avg.toFixed(1).replace(".", "٫")) : null;
 
   const share = async () => {
     try {
@@ -296,10 +359,99 @@ export function ProductDetailView({
 
   const pad = (n: number) => toPersianDigits(String(n).padStart(2, "0"));
 
+  const priceBlock = (
+    <div className="space-y-1">
+      {originalWithAdj != null && discountPercent != null ? (
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-[13px] text-[#c0c2c5] line-through">
+            {formatAmountFa(originalWithAdj, currency)}
+          </span>
+          {discountPercent > 0 ? (
+            <span className="rounded-full bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-foreground">
+              {toPersianDigits(String(discountPercent))}٪
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="flex items-baseline justify-end gap-1">
+        <span className="text-[22px] font-black tracking-tight text-[#0c0c0c] dark:text-foreground">
+          {formatAmountFa(unitPrice, currency)}
+        </span>
+        <span className="text-[12px] text-[#424750] dark:text-muted-foreground">
+          {currencyUnit}
+        </span>
+      </div>
+    </div>
+  );
+
+  const cartControls = canPurchase ? (
+    cartItem ? (
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[13px] font-medium text-[#0c0c0c] dark:text-foreground">
+            در سبد شما
+          </p>
+          <Link
+            href="/cart"
+            className="mt-0.5 inline-block text-[12px] font-medium text-[#19bfd3] hover:underline"
+          >
+            مشاهده سبد خرید
+          </Link>
+        </div>
+        <div className="inline-flex h-11 items-center gap-1 rounded-lg border border-[#e0e0e2] bg-background px-1 shadow-sm dark:border-white/10">
+          <button
+            type="button"
+            aria-label="افزایش"
+            disabled={cartBusy || (maxQty != null && cartItem.quantity >= maxQty)}
+            onClick={() => updateMutation.mutate(cartItem.quantity + 1)}
+            className="inline-flex size-9 items-center justify-center text-primary disabled:opacity-40"
+          >
+            <Plus className="size-4" strokeWidth={2.5} />
+          </button>
+          <span className="min-w-7 text-center text-[14px] font-bold text-primary">
+            {toPersianDigits(String(cartItem.quantity))}
+          </span>
+          {cartItem.quantity <= 1 ? (
+            <button
+              type="button"
+              aria-label="حذف از سبد"
+              disabled={cartBusy}
+              onClick={() => removeMutation.mutate()}
+              className="inline-flex size-9 items-center justify-center text-primary disabled:opacity-40"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              aria-label="کاهش"
+              disabled={cartBusy}
+              onClick={() => updateMutation.mutate(cartItem.quantity - 1)}
+              className="inline-flex size-9 items-center justify-center text-primary disabled:opacity-40"
+            >
+              <Minus className="size-4" strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
+      </div>
+    ) : (
+      <Button
+        className="h-12 w-full rounded-lg text-[14px] font-bold"
+        disabled={cartBusy}
+        onClick={() => addMutation.mutate()}
+      >
+        {addMutation.isPending ? "در حال افزودن..." : "افزودن به سبد"}
+      </Button>
+    )
+  ) : (
+    <Button className="h-12 w-full rounded-lg" disabled variant="secondary">
+      ناموجود
+    </Button>
+  );
+
   return (
-    <div className="bg-background">
+    <div className="bg-[#f5f5f5] pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] dark:bg-background lg:pb-0">
       <div className="mx-auto w-full max-w-[1676px] px-3 py-3 sm:px-4 lg:px-5 lg:py-4">
-        {/* breadcrumb */}
         <nav className="mb-3 flex flex-wrap items-center gap-1 text-[11px] text-[#81858b] sm:mb-4 sm:text-[12px]">
           <Link href="/" className="hover:text-primary">
             فروشگاه
@@ -308,7 +460,11 @@ export function ProductDetailView({
           {product.categoryName ? (
             <>
               <Link
-                href={`/products?search=${encodeURIComponent(product.categoryName)}`}
+                href={
+                  product.categorySlug
+                    ? `/products?category=${encodeURIComponent(product.categorySlug)}`
+                    : `/products?search=${encodeURIComponent(product.categoryName)}`
+                }
                 className="hover:text-primary"
               >
                 {product.categoryName}
@@ -319,7 +475,7 @@ export function ProductDetailView({
           {product.brandName ? (
             <>
               <Link
-                href={`/products?brand=${encodeURIComponent(product.brandName)}`}
+                href={`/products?brand=${encodeURIComponent(product.brandSlug || product.brandName)}`}
                 className="hover:text-primary"
               >
                 {product.brandName}
@@ -332,471 +488,391 @@ export function ProductDetailView({
           </span>
         </nav>
 
-        {/* Digikala-like 3 columns: gallery | info | buybox (RTL: first=right) */}
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(280px,340px)] lg:gap-6 xl:gap-8">
-          {/* gallery */}
-          <section className="min-w-0">
-            {hasAmazing && !finished ? (
-              <div className="mb-3 flex h-11 items-center justify-between gap-3 rounded-md bg-[color-mix(in_oklab,var(--primary)_11%,white)] px-3.5 text-primary dark:bg-[color-mix(in_oklab,var(--primary)_22%,transparent)]">
-                <p className="text-[13px] font-bold tracking-tight">
-                  پیشنهاد شگفت‌انگیز
-                </p>
-                <div
-                  className="flex items-center gap-1.5 text-[13px] font-bold tabular-nums"
-                  dir="ltr"
-                >
-                  <span>{pad(hours)}</span>
-                  <span className="opacity-50">:</span>
-                  <span>{pad(minutes)}</span>
-                  <span className="opacity-50">:</span>
-                  <span>{pad(seconds)}</span>
-                  <Clock3 className="ms-0.5 size-4 opacity-80" strokeWidth={2} />
-                </div>
-              </div>
-            ) : null}
-
-            <div className="relative">
-              <div className="absolute start-0 top-1 z-10 flex flex-col gap-3 ps-0.5">
-                {[
-                  {
-                    label: liked ? "حذف از علاقه‌مندی" : "افزودن به علاقه‌مندی",
-                    icon: Heart,
-                    onClick: () => likeMutation.mutate(),
-                    active: liked,
-                  },
-                  { label: "اشتراک‌گذاری", icon: Share2, onClick: () => void share() },
-                  { label: "اطلاع‌رسانی", icon: Bell },
-                  { label: "نمودار قیمت", icon: ChartColumn },
-                  { label: "مقایسه", icon: GitCompare },
-                  { label: "لیست", icon: List },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      key={item.label}
-                      type="button"
-                      aria-label={item.label}
-                      title={item.label}
-                      onClick={item.onClick}
-                      className="text-[#424750] transition hover:text-primary dark:text-foreground"
-                    >
-                      <Icon
-                        className={cn(
-                          "size-5",
-                          item.active && "fill-primary text-primary",
-                        )}
-                        strokeWidth={1.75}
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="overflow-hidden rounded-md bg-background">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={images[activeImage] ?? images[0]}
-                  alt={product.name}
-                  className="mx-auto aspect-square max-h-[420px] w-full object-contain p-2 sm:max-h-[480px] sm:p-4"
-                />
-              </div>
-            </div>
-
-            {images.length > 1 ? (
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                {images.map((src, i) => (
-                  <button
-                    key={`${src}-${i}`}
-                    type="button"
-                    onClick={() => setActiveImage(i)}
-                    className={cn(
-                      "size-[64px] shrink-0 overflow-hidden rounded-md border bg-background transition sm:size-[72px]",
-                      i === activeImage
-                        ? "border-primary"
-                        : "border-[#e0e0e2] hover:border-primary/50 dark:border-white/10",
-                    )}
+        <div className="overflow-hidden rounded-lg border border-[#e0e0e2] bg-white dark:border-white/10 dark:bg-card">
+          <div className="grid items-start gap-0 lg:grid-cols-[minmax(300px,1fr)_minmax(0,1.2fr)_minmax(280px,320px)]">
+            {/* gallery — right in RTL */}
+            <section className="min-w-0 border-b border-[#f0f0f1] p-4 lg:border-b-0 lg:border-e dark:border-white/10">
+              {hasAmazing && !finished ? (
+                <div className="mb-3 flex h-10 items-center justify-between gap-3 rounded-lg bg-[color-mix(in_oklab,var(--primary)_12%,white)] px-3 text-primary dark:bg-[color-mix(in_oklab,var(--primary)_22%,transparent)]">
+                  <p className="text-[13px] font-bold">پیشنهاد شگفت‌انگیز</p>
+                  <div
+                    className="flex items-center gap-1.5 text-[13px] font-bold tabular-nums"
+                    dir="ltr"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={src}
-                      alt=""
-                      className="size-full object-contain p-1"
-                    />
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </section>
-
-          {/* middle info */}
-          <section className="min-w-0 space-y-4">
-            {(product.categoryName || product.brandName) && (
-              <p className="text-[12px] text-[#19bfd3]">
-                {[product.brandName, product.categoryName]
-                  .filter(Boolean)
-                  .join(" / ")}
-              </p>
-            )}
-
-            <h1 className="text-[16px] font-bold leading-8 text-[#0c0c0c] sm:text-[18px] sm:leading-9 dark:text-foreground">
-              {product.name}
-            </h1>
-
-            {(() => {
-              const avg = product.averageRating ?? 0;
-              const rated = product.ratingCount ?? 0;
-              const comments = product.commentCount ?? 0;
-              const avgLabel =
-                avg > 0
-                  ? toPersianDigits(avg.toFixed(1).replace(".", "٫"))
-                  : null;
-              return (
-                <div className="flex flex-wrap items-center gap-2 border-b border-[#f0f0f1] pb-3 dark:border-white/10">
-                  {avgLabel ? (
-                    <button
-                      type="button"
-                      onClick={() => setTab("reviews")}
-                      className="inline-flex items-center gap-1 text-[12px] text-[#424750] hover:text-primary dark:text-foreground"
-                    >
-                      <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                      <span className="font-bold tabular-nums">{avgLabel}</span>
-                      {rated > 0 ? (
-                        <span className="text-[#81858b]">
-                          (امتیاز {toPersianDigits(String(rated))} خریدار)
-                        </span>
-                      ) : null}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setTab("reviews")}
-                      className="text-[12px] text-[#81858b] hover:text-primary"
-                    >
-                      بدون امتیاز
-                    </button>
-                  )}
-
-                  {comments > 0 ? (
-                    <button
-                      type="button"
-                      onClick={() => setTab("reviews")}
-                      className="inline-flex items-center gap-1 rounded-full bg-[#f0f0f1] px-2.5 py-1 text-[11px] font-medium text-[#5a5c7a] hover:bg-[#e8e8ea] dark:bg-muted dark:text-foreground"
-                    >
-                      <Sparkles className="size-3 text-[#7c3aed]" />
-                      خلاصه دیدگاه‌ها
-                    </button>
-                  ) : null}
-
-                  <button
-                    type="button"
-                    onClick={() => setTab("reviews")}
-                    className="inline-flex items-center gap-0.5 rounded-full bg-[#f0f0f1] px-2.5 py-1 text-[11px] text-[#81858b] hover:bg-[#e8e8ea] dark:bg-muted dark:text-muted-foreground"
-                  >
-                    {toPersianDigits(String(comments))} دیدگاه
-                    <ChevronLeft className="size-3" />
-                  </button>
-
-                  {product.sku || product.productCode ? (
-                    <span className="ms-auto text-[11px] text-[#81858b]">
-                      کد:{" "}
-                      <span className="text-[#424750] dark:text-foreground" dir="ltr">
-                        {toPersianDigits(product.sku || product.productCode)}
-                      </span>
-                    </span>
-                  ) : null}
+                    <span>{pad(hours)}</span>
+                    <span className="opacity-50">:</span>
+                    <span>{pad(minutes)}</span>
+                    <span className="opacity-50">:</span>
+                    <span>{pad(seconds)}</span>
+                    <Clock3 className="ms-0.5 size-4 opacity-80" />
+                  </div>
                 </div>
-              );
-            })()}
+              ) : null}
 
-            {params.map((spec) => (
-              <div key={spec.id ?? spec.name} className="space-y-2.5">
-                <p className="text-[12px] text-[#424750] dark:text-foreground">
-                  {spec.name}:{" "}
-                  <span className="font-bold">
-                    {spec.id
-                      ? spec.values.find((v) => v.id === selections[spec.id!])
-                          ?.value
-                      : null}
-                  </span>
-                </p>
-                <div className="flex flex-wrap gap-2.5">
-                  {spec.values.map((v) => {
-                    if (!spec.id || !v.id) return null;
-                    const active = selections[spec.id] === v.id;
-                    const looksLikeColor =
-                      /رنگ|color/i.test(spec.name) &&
-                      !/[۰-۹0-9]/.test(v.value) &&
-                      v.value.length <= 20;
+              <div className="relative">
+                <div className="absolute start-0 top-0 z-20 flex flex-col gap-3.5">
+                  {[
+                    {
+                      label: liked ? "حذف از علاقه‌مندی" : "افزودن به علاقه‌مندی",
+                      icon: Heart,
+                      onClick: () => likeMutation.mutate(),
+                      active: liked,
+                    },
+                    {
+                      label: "اشتراک‌گذاری",
+                      icon: Share2,
+                      onClick: () => void share(),
+                    },
+                    { label: "اطلاع‌رسانی شگفت‌انگیز", icon: Bell },
+                    { label: "نمودار قیمت", icon: ChartColumn },
+                    { label: "مقایسه", icon: GitCompare },
+                    { label: "افزودن به لیست", icon: List },
+                  ].map((item) => {
+                    const Icon = item.icon;
                     return (
                       <button
-                        key={v.id}
+                        key={item.label}
                         type="button"
-                        title={v.value}
-                        onClick={() =>
-                          setSelections((prev) => ({
-                            ...prev,
-                            [spec.id!]: v.id!,
-                          }))
-                        }
-                        className={cn(
-                          "transition",
-                          looksLikeColor
-                            ? cn(
-                                "relative size-8 rounded-full border-2",
-                                active
-                                  ? "border-primary"
-                                  : "border-[#e0e0e2] dark:border-white/10",
-                              )
-                            : cn(
-                                "rounded-md border px-3 py-2 text-[12px]",
-                                active
-                                  ? "border-primary bg-primary/5 font-medium text-foreground"
-                                  : "border-[#e0e0e2] text-[#424750] hover:border-primary/40 dark:border-white/10 dark:text-foreground",
-                              ),
-                        )}
-                        style={
-                          looksLikeColor
-                            ? {
-                                backgroundColor: guessColor(v.value),
-                              }
-                            : undefined
-                        }
+                        aria-label={item.label}
+                        title={item.label}
+                        onClick={item.onClick}
+                        className="text-[#424750] transition hover:text-primary dark:text-foreground"
                       >
-                        {looksLikeColor ? (
-                          active ? (
-                            <Check
-                              className={cn(
-                                "absolute inset-0 m-auto size-3.5",
-                                isLightColor(v.value)
-                                  ? "text-[#424750]"
-                                  : "text-white",
-                              )}
-                              strokeWidth={3}
-                            />
-                          ) : null
-                        ) : (
-                          <>
-                            {v.value}
-                            {(v.priceAdjustment || 0) !== 0 ? (
-                              <span className="ms-1 text-[11px] text-muted-foreground">
-                                {(v.priceAdjustment || 0) > 0 ? "+" : ""}
-                                {formatPrice(v.priceAdjustment || 0, currency)}
-                              </span>
-                            ) : null}
-                          </>
-                        )}
+                        <Icon
+                          className={cn(
+                            "size-5",
+                            item.active && "fill-primary text-primary",
+                          )}
+                          strokeWidth={1.75}
+                        />
                       </button>
                     );
                   })}
                 </div>
-              </div>
-            ))}
 
-            {featureSpecs.length > 0 ? (
-              <div>
-                <p className="mb-2.5 text-[12px] font-bold text-[#0c0c0c] dark:text-foreground">
-                  ویژگی‌ها
-                </p>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {featureSpecs.map((s) => (
-                    <div
-                      key={s.id ?? s.name}
-                      className="rounded-md bg-[#f0f0f1] px-3 py-2.5 dark:bg-muted"
+                <div
+                  className="group relative cursor-zoom-in overflow-hidden bg-white dark:bg-transparent"
+                  onMouseEnter={(e) => {
+                    if (window.matchMedia("(pointer: fine)").matches) {
+                      setZoomActive(true);
+                      updateZoomFromEvent(e);
+                    }
+                  }}
+                  onMouseMove={updateZoomFromEvent}
+                  onMouseLeave={() => setZoomActive(false)}
+                  onClick={() => setLightboxOpen(true)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setLightboxOpen(true);
+                    }
+                  }}
+                  aria-label="بزرگ‌نمایی تصویر"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={activeSrc}
+                    alt={product.name}
+                    className="mx-auto aspect-square max-h-[380px] w-full object-contain p-6 transition-transform duration-100 ease-out will-change-transform sm:max-h-[440px] sm:p-8"
+                    style={
+                      zoomActive
+                        ? {
+                            transform: `scale(${ZOOM_SCALE})`,
+                            transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
+                          }
+                        : undefined
+                    }
+                    draggable={false}
+                  />
+                  {!zoomActive ? (
+                    <span className="pointer-events-none absolute end-2 bottom-2 hidden items-center gap-1 rounded-md bg-black/40 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition group-hover:opacity-100 lg:inline-flex">
+                      <ZoomIn className="size-3" />
+                      زوم
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              {images.length > 1 ? (
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                  {images.map((src, i) => (
+                    <button
+                      key={`${src}-${i}`}
+                      type="button"
+                      onClick={() => setActiveImage(i)}
+                      className={cn(
+                        "size-[62px] shrink-0 overflow-hidden rounded-lg border bg-white transition sm:size-[68px] dark:bg-transparent",
+                        i === activeImage
+                          ? "border-primary"
+                          : "border-[#e0e0e2] hover:border-primary/50 dark:border-white/10",
+                      )}
                     >
-                      <p className="text-[11px] text-[#81858b]">{s.name}</p>
-                      <p className="mt-0.5 line-clamp-2 text-[12px] font-medium text-[#0c0c0c] dark:text-foreground">
-                        {(s.values ?? [])
-                          .map((v) => v.value)
-                          .filter(Boolean)
-                          .join("، ")}
-                      </p>
-                    </div>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={src}
+                        alt=""
+                        className="size-full object-contain p-1"
+                      />
+                    </button>
                   ))}
                 </div>
+              ) : null}
+            </section>
+
+            {/* center info */}
+            <section className="min-w-0 space-y-4 border-b border-[#f0f0f1] p-4 lg:border-b-0 lg:border-e dark:border-white/10 sm:p-5">
+              {(product.categoryName || product.brandName) && (
+                <p className="text-[12px] text-[#19bfd3]">
+                  {[product.brandName, product.categoryName]
+                    .filter(Boolean)
+                    .join(" / ")}
+                </p>
+              )}
+
+              <h1 className="text-[15px] font-bold leading-7 text-[#0c0c0c] sm:text-[17px] sm:leading-8 dark:text-foreground">
+                {product.name}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-2 border-b border-[#f0f0f1] pb-3 dark:border-white/10">
+                {avgLabel ? (
+                  <button
+                    type="button"
+                    onClick={() => setTab("reviews")}
+                    className="inline-flex items-center gap-1 text-[12px] text-[#424750] hover:text-primary dark:text-foreground"
+                  >
+                    <Star className="size-3.5 fill-amber-400 text-amber-400" />
+                    <span className="font-bold tabular-nums">{avgLabel}</span>
+                    {rated > 0 ? (
+                      <span className="text-[#81858b]">
+                        ({toPersianDigits(String(rated))} امتیاز)
+                      </span>
+                    ) : null}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setTab("reviews")}
+                    className="text-[12px] text-[#81858b] hover:text-primary"
+                  >
+                    بدون امتیاز
+                  </button>
+                )}
+
+                {comments > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setTab("reviews")}
+                    className="inline-flex items-center gap-1 rounded-full bg-[#f0f0f1] px-2.5 py-1 text-[11px] font-medium text-[#5a5c7a] hover:bg-[#e8e8ea] dark:bg-muted dark:text-foreground"
+                  >
+                    <Sparkles className="size-3 text-[#7c3aed]" />
+                    خلاصه دیدگاه‌ها
+                  </button>
+                ) : null}
+
                 <button
                   type="button"
-                  onClick={() => setTab("specs")}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-md border border-[#e0e0e2] bg-background py-2.5 text-[12px] font-medium text-[#0c0c0c] hover:bg-[#fafafa] dark:border-white/10 dark:text-foreground dark:hover:bg-muted/40"
+                  onClick={() => setTab("reviews")}
+                  className="inline-flex items-center gap-0.5 rounded-full bg-[#f0f0f1] px-2.5 py-1 text-[11px] text-[#81858b] hover:bg-[#e8e8ea] dark:bg-muted"
                 >
-                  مشاهده همه ویژگی‌ها
+                  {toPersianDigits(String(comments))} دیدگاه
+                  <ChevronLeft className="size-3" />
                 </button>
-              </div>
-            ) : null}
 
-            <div className="flex items-start gap-2 rounded-md bg-[#f0f0f1]/70 px-3 py-2.5 text-[11px] leading-5 text-[#81858b] dark:bg-muted/50">
-              <Info className="mt-0.5 size-3.5 shrink-0" />
-              <span>
-                امکان برگشت کالا در گروه کالایی با دلیل «انصراف از خرید» تنها در
-                صورتی مورد قبول است که پلمب کالا باز نشده باشد.
-              </span>
-            </div>
-          </section>
-
-          {/* sticky buy box — Digikala style */}
-          <aside className="min-w-0 lg:sticky lg:top-24">
-            <div className="overflow-hidden rounded-md border border-[#e0e0e2] bg-background dark:border-white/10">
-              {/* seller */}
-              <div className="space-y-3 border-b border-[#f0f0f1] px-4 py-3.5 dark:border-white/10">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[14px] font-bold text-[#0c0c0c] dark:text-foreground">
-                    فروشنده
-                  </p>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-                    آ
+                {product.sku || product.productCode ? (
+                  <span className="ms-auto max-w-full truncate text-[11px] text-[#81858b]">
+                    کد کالا:{" "}
+                    <span
+                      className="text-[#424750] dark:text-foreground"
+                      dir="ltr"
+                    >
+                      {toPersianDigits(product.sku || product.productCode)}
+                    </span>
                   </span>
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-bold text-[#0c0c0c] dark:text-foreground">
-                      فروشگاه آپولو
-                    </p>
-                    <p className="mt-0.5 flex items-center gap-1 text-[12px] text-emerald-600">
-                      <Check className="size-3.5" strokeWidth={2.5} />
-                      رضایت {toPersianDigits("۹۹.۶")}٪ از کالا
-                    </p>
-                  </div>
-                </div>
+                ) : null}
               </div>
 
-              {/* price + cart action */}
-              <div className="space-y-4 px-4 py-4">
-                {canPurchase ? (
-                  <>
-                    <div className="space-y-1">
-                      {originalWithAdj != null && discountPercent != null ? (
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="text-[13px] text-[#c0c2c5] line-through">
-                            {formatAmountFa(originalWithAdj, currency)}
-                          </span>
-                          {discountPercent > 0 ? (
-                            <span className="rounded-full bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-foreground">
-                              {toPersianDigits(String(discountPercent))}٪
-                            </span>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      <div className="flex items-baseline justify-end gap-1">
-                        <span className="text-[22px] font-black tracking-tight text-[#0c0c0c] dark:text-foreground">
-                          {formatAmountFa(unitPrice, currency)}
-                        </span>
-                        <span className="text-[12px] text-[#424750] dark:text-muted-foreground">
-                          {currencyUnit}
-                        </span>
-                      </div>
-                    </div>
-
-                    {cartItem ? (
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-[13px] font-medium text-[#0c0c0c] dark:text-foreground">
-                            در سبد شما
-                          </p>
-                          <Link
-                            href="/cart"
-                            className="mt-0.5 inline-block text-[12px] font-medium text-[#19bfd3] hover:underline"
-                          >
-                            مشاهده سبد خرید
-                          </Link>
-                        </div>
-                        <div className="inline-flex h-11 items-center gap-1 rounded-md border border-[#e0e0e2] bg-background px-1 shadow-sm dark:border-white/10">
-                          <button
-                            type="button"
-                            aria-label="افزایش"
-                            disabled={
-                              cartBusy ||
-                              (maxQty != null && cartItem.quantity >= maxQty)
-                            }
-                            onClick={() =>
-                              updateMutation.mutate(cartItem.quantity + 1)
-                            }
-                            className="inline-flex size-9 items-center justify-center text-primary disabled:opacity-40"
-                          >
-                            <Plus className="size-4" strokeWidth={2.5} />
-                          </button>
-                          <span className="min-w-7 text-center text-[14px] font-bold text-primary">
-                            {toPersianDigits(String(cartItem.quantity))}
-                          </span>
-                          {cartItem.quantity <= 1 ? (
-                            <button
-                              type="button"
-                              aria-label="حذف از سبد"
-                              disabled={cartBusy}
-                              onClick={() => removeMutation.mutate()}
-                              className="inline-flex size-9 items-center justify-center text-primary disabled:opacity-40"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              aria-label="کاهش"
-                              disabled={cartBusy}
-                              onClick={() =>
-                                updateMutation.mutate(cartItem.quantity - 1)
-                              }
-                              className="inline-flex size-9 items-center justify-center text-primary disabled:opacity-40"
-                            >
-                              <Minus className="size-4" strokeWidth={2.5} />
-                            </button>
+              {params.map((spec) => (
+                <div key={spec.id ?? spec.name} className="space-y-2.5">
+                  <p className="text-[12px] text-[#424750] dark:text-foreground">
+                    {spec.name}:{" "}
+                    <span className="font-bold">
+                      {spec.id
+                        ? spec.values.find((v) => v.id === selections[spec.id!])
+                            ?.value
+                        : null}
+                    </span>
+                  </p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {spec.values.map((v) => {
+                      if (!spec.id || !v.id) return null;
+                      const active = selections[spec.id] === v.id;
+                      const looksLikeColor =
+                        (/رنگ|color|colour/i.test(spec.name) ||
+                          Boolean(v.colorHex)) &&
+                        !/[۰-۹0-9]/.test(v.value) &&
+                        v.value.length <= 24;
+                      const swatch = looksLikeColor
+                        ? resolveSwatchColor(v.value, v.colorHex)
+                        : null;
+                      return (
+                        <button
+                          key={v.id}
+                          type="button"
+                          title={v.value}
+                          onClick={() =>
+                            setSelections((prev) => ({
+                              ...prev,
+                              [spec.id!]: v.id!,
+                            }))
+                          }
+                          className={cn(
+                            "transition",
+                            looksLikeColor
+                              ? cn(
+                                  "relative size-8 rounded-full border-2",
+                                  active
+                                    ? "border-primary ring-2 ring-primary/20"
+                                    : "border-[#e0e0e2] dark:border-white/10",
+                                )
+                              : cn(
+                                  "rounded-lg border px-3 py-2 text-[12px]",
+                                  active
+                                    ? "border-primary bg-primary/5 font-medium text-foreground"
+                                    : "border-[#e0e0e2] text-[#424750] hover:border-primary/40 dark:border-white/10 dark:text-foreground",
+                                ),
                           )}
-                        </div>
-                      </div>
-                    ) : (
-                      <Button
-                        className="h-12 w-full rounded-md text-[14px] font-bold"
-                        disabled={cartBusy}
-                        onClick={() => addMutation.mutate()}
-                      >
-                        {addMutation.isPending
-                          ? "در حال افزودن..."
-                          : "افزودن به سبد خرید"}
-                      </Button>
-                    )}
-                  </>
-                ) : (
-                  <Button
-                    className="h-12 w-full rounded-md"
-                    disabled
-                    variant="secondary"
-                  >
-                    ناموجود
-                  </Button>
-                )}
-              </div>
-
-              {/* warranty */}
-              <div className="flex items-center gap-2 border-t border-[#f0f0f1] px-4 py-3.5 text-[12px] text-[#424750] dark:border-white/10 dark:text-foreground">
-                <ShieldCheck className="size-5 shrink-0" strokeWidth={1.75} />
-                <span>گارانتی اصالت و سلامت فیزیکی کالا</span>
-              </div>
-
-              {/* delivery */}
-              <div className="border-t border-[#f0f0f1] px-4 py-3.5 dark:border-white/10">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-[13px] font-bold text-[#0c0c0c] dark:text-foreground">
-                    <Package className="size-4 text-[#19bfd3]" />
-                    روش‌ها و هزینه‌های تحویل
+                          style={
+                            swatch ? { backgroundColor: swatch } : undefined
+                          }
+                        >
+                          {looksLikeColor ? (
+                            active ? (
+                              <Check
+                                className={cn(
+                                  "absolute inset-0 m-auto size-3.5",
+                                  isLightSwatch(swatch || v.value)
+                                    ? "text-[#424750]"
+                                    : "text-white",
+                                )}
+                                strokeWidth={3}
+                              />
+                            ) : (
+                              <span className="sr-only">{v.value}</span>
+                            )
+                          ) : (
+                            <>
+                              {v.value}
+                              {(v.priceAdjustment || 0) !== 0 ? (
+                                <span className="ms-1 text-[11px] text-muted-foreground">
+                                  {(v.priceAdjustment || 0) > 0 ? "+" : ""}
+                                  {formatPrice(v.priceAdjustment || 0, currency)}
+                                </span>
+                              ) : null}
+                            </>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
-                  <ChevronLeft className="size-4 text-[#a1a3a8]" />
                 </div>
-                <ul className="space-y-2.5 text-[12px] text-[#424750] dark:text-foreground">
-                  <li className="flex items-start gap-2">
-                    <Truck className="mt-0.5 size-4 shrink-0 text-primary" />
-                    <span>ارسال عادی فروشگاه · وابسته به سبد</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Truck className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-                    <span>ارسال سریع · پس از ثبت سفارش</span>
-                  </li>
-                </ul>
+              ))}
+
+              {featureSpecs.length > 0 ? (
+                <div>
+                  <p className="mb-2.5 text-[13px] font-bold text-[#0c0c0c] dark:text-foreground">
+                    ویژگی‌ها
+                  </p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {featureSpecs.map((s) => (
+                      <div
+                        key={s.id ?? s.name}
+                        className="rounded-lg bg-[#f0f0f1] px-3 py-2.5 dark:bg-muted"
+                      >
+                        <p className="text-[11px] text-[#81858b]">{s.name}</p>
+                        <p className="mt-0.5 line-clamp-2 text-[12px] font-medium text-[#0c0c0c] dark:text-foreground">
+                          {(s.values ?? [])
+                            .map((v) => v.value)
+                            .filter(Boolean)
+                            .join("، ")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTab("specs");
+                      document
+                        .getElementById("product-tabs")
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                    className="mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-[#19bfd3] hover:underline"
+                  >
+                    مشاهده همه ویژگی‌ها
+                    <ChevronLeft className="size-3.5" />
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="flex items-start gap-2 rounded-lg bg-[#f0f0f1]/80 px-3 py-2.5 text-[11px] leading-5 text-[#81858b] dark:bg-muted/50">
+                <Info className="mt-0.5 size-3.5 shrink-0" />
+                <span>{industry.returnNote}</span>
               </div>
-            </div>
-          </aside>
+            </section>
+
+            {/* buy box */}
+            <aside className="min-w-0 bg-[#fafafa] p-3 dark:bg-muted/20 lg:sticky lg:top-20 lg:self-start lg:bg-transparent lg:p-4 dark:lg:bg-transparent">
+              <div className="overflow-hidden rounded-lg border border-[#e0e0e2] bg-white shadow-sm dark:border-white/10 dark:bg-card">
+                <div className="space-y-4 px-4 py-4">
+                  {canPurchase ? (
+                    <p className="flex items-center gap-1.5 text-[12px] text-emerald-600">
+                      <Check className="size-3.5" strokeWidth={2.5} />
+                      موجود در انبار
+                    </p>
+                  ) : (
+                    <p className="text-[12px] text-destructive">ناموجود</p>
+                  )}
+                  {canPurchase ? priceBlock : null}
+                  <div className="hidden lg:block">{cartControls}</div>
+                </div>
+
+                <div className="flex items-center gap-2 border-t border-[#f0f0f1] px-4 py-3.5 text-[12px] text-[#424750] dark:border-white/10 dark:text-foreground">
+                  <ShieldCheck className="size-5 shrink-0 text-[#424750]" />
+                  <span>{industry.warranty}</span>
+                </div>
+
+                <div className="border-t border-[#f0f0f1] px-4 py-3.5 dark:border-white/10">
+                  <div className="mb-2.5 flex items-center gap-2 text-[13px] font-bold text-[#0c0c0c] dark:text-foreground">
+                    <Package className="size-4 text-[#19bfd3]" />
+                    {industry.deliveryTitle}
+                  </div>
+                  <ul className="space-y-2 text-[12px] text-[#424750] dark:text-foreground">
+                    {industry.deliveryLines.map((line, idx) => (
+                      <li key={line} className="flex items-start gap-2">
+                        <Truck
+                          className={cn(
+                            "mt-0.5 size-4 shrink-0",
+                            idx === 0 ? "text-primary" : "text-emerald-600",
+                          )}
+                        />
+                        <span>{line}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </aside>
+          </div>
         </div>
 
         {/* tabs */}
-        <div className="mt-8 border-t border-[#e0e0e2] dark:border-white/10">
-          <div className="sticky top-0 z-[5] flex gap-1 overflow-x-auto bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div
+          id="product-tabs"
+          className="mt-4 overflow-hidden rounded-lg border border-[#e0e0e2] bg-white dark:border-white/10 dark:bg-card"
+        >
+          <div className="sticky top-0 z-[5] flex gap-1 overflow-x-auto border-b border-[#f0f0f1] bg-white/95 backdrop-blur dark:border-white/10 dark:bg-card/95">
             {(
               [
                 { id: "desc" as const, label: "معرفی" },
@@ -804,11 +880,11 @@ export function ProductDetailView({
                 {
                   id: "reviews" as const,
                   label:
-                    (product.commentCount ?? 0) > 0
-                      ? `دیدگاه‌ها (${toPersianDigits(String(product.commentCount))})`
+                    comments > 0
+                      ? `دیدگاه‌ها (${toPersianDigits(String(comments))})`
                       : "دیدگاه‌ها",
                 },
-              ]
+              ] as const
             ).map((t) => (
               <button
                 key={t.id}
@@ -829,29 +905,32 @@ export function ProductDetailView({
             ))}
           </div>
 
-          <div className="py-5 sm:py-6">
+          <div className="p-4 sm:p-5 lg:p-6">
             {tab === "desc" ? (
               product.description?.trim() ? (
-                <div className="w-full">
+                <div>
+                  <h2 className="mb-3 text-[16px] font-bold text-[#0c0c0c] dark:text-foreground">
+                    معرفی
+                  </h2>
                   <div className="relative">
                     <div
                       className={cn(
-                        "prose prose-sm dark:prose-invert max-w-none w-full leading-8 text-[#424750] dark:text-foreground",
-                        !descExpanded && "max-h-[220px] overflow-hidden",
+                        "prose prose-sm dark:prose-invert max-w-none w-full overflow-x-auto leading-8 text-[#424750] dark:text-foreground [&_img]:max-w-full [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto",
+                        !descExpanded && "max-h-[260px] overflow-hidden",
                       )}
                       dangerouslySetInnerHTML={{ __html: product.description }}
                     />
                     {!descExpanded ? (
                       <div
                         aria-hidden
-                        className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent"
+                        className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white to-transparent dark:from-card"
                       />
                     ) : null}
                   </div>
                   <button
                     type="button"
                     onClick={() => setDescExpanded((v) => !v)}
-                    className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-md border border-[#e0e0e2] bg-background py-2.5 text-[13px] font-medium text-[#0c0c0c] hover:bg-[#fafafa] dark:border-white/10 dark:text-foreground dark:hover:bg-muted/40"
+                    className="mt-3 inline-flex items-center gap-1 text-[13px] font-medium text-[#19bfd3] hover:underline"
                   >
                     {descExpanded ? "بستن" : "مشاهده بیشتر"}
                     <ChevronLeft
@@ -871,30 +950,35 @@ export function ProductDetailView({
 
             {tab === "specs" ? (
               allDisplaySpecs.length > 0 ? (
-                <div className="max-w-3xl overflow-hidden rounded-md border border-[#e0e0e2] dark:border-white/10">
-                  <table className="w-full text-[13px]">
-                    <tbody>
-                      {allDisplaySpecs.map((s, i) => (
-                        <tr
-                          key={s.id ?? s.name}
-                          className={cn(
-                            "border-b border-[#e0e0e2] last:border-0 dark:border-white/10",
-                            i % 2 === 0 && "bg-[#fafafa] dark:bg-muted/20",
-                          )}
-                        >
-                          <th className="w-[36%] px-4 py-3 text-start font-medium text-[#81858b]">
-                            {s.name}
-                          </th>
-                          <td className="px-4 py-3 text-[#0c0c0c] dark:text-foreground">
-                            {(s.values ?? [])
-                              .map((v) => v.value)
-                              .filter(Boolean)
-                              .join("، ")}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div>
+                  <h2 className="mb-4 text-[16px] font-bold text-[#0c0c0c] dark:text-foreground">
+                    مشخصات
+                  </h2>
+                  <div className="overflow-hidden rounded-lg border border-[#e0e0e2] dark:border-white/10">
+                    <table className="w-full text-[13px]">
+                      <tbody>
+                        {allDisplaySpecs.map((s, i) => (
+                          <tr
+                            key={s.id ?? s.name}
+                            className={cn(
+                              "border-b border-[#e0e0e2] last:border-0 dark:border-white/10",
+                              i % 2 === 0 && "bg-[#fafafa] dark:bg-muted/20",
+                            )}
+                          >
+                            <th className="w-[34%] px-4 py-3.5 text-start font-medium text-[#81858b] sm:w-[28%]">
+                              {s.name}
+                            </th>
+                            <td className="px-4 py-3.5 text-[#0c0c0c] dark:text-foreground">
+                              {(s.values ?? [])
+                                .map((v) => v.value)
+                                .filter(Boolean)
+                                .join("، ")}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -905,6 +989,9 @@ export function ProductDetailView({
 
             {tab === "reviews" ? (
               <div id="product-reviews" className="w-full">
+                <h2 className="mb-4 text-[16px] font-bold text-[#0c0c0c] dark:text-foreground">
+                  امتیاز و دیدگاه کاربران
+                </h2>
                 <ProductEngagement
                   productId={product.id}
                   productSlug={product.slug}
@@ -919,34 +1006,116 @@ export function ProductDetailView({
       </div>
 
       <RelatedProductsSections product={product} />
+
+      {/* mobile sticky buy bar */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e0e0e2] bg-white px-3 pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] dark:border-white/10 dark:bg-card lg:hidden pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
+        <div className="mx-auto flex max-w-[1676px] flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
+          {canPurchase ? (
+            <div className="min-w-0 sm:flex-1">{priceBlock}</div>
+          ) : null}
+          <div className="w-full shrink-0 sm:w-[min(52%,220px)]">{cartControls}</div>
+        </div>
+      </div>
+
+      {lightboxOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-black/75"
+          role="dialog"
+          aria-modal="true"
+          aria-label="نمایش بزرگ تصویر"
+          onClick={() => setLightboxOpen(false)}
+          onTouchStart={(e) => {
+            const t = e.touches[0];
+            if (t) (e.currentTarget as HTMLElement).dataset.touchX = String(t.clientX);
+          }}
+          onTouchEnd={(e) => {
+            const start = Number((e.currentTarget as HTMLElement).dataset.touchX || 0);
+            const end = e.changedTouches[0]?.clientX ?? start;
+            const dx = end - start;
+            if (Math.abs(dx) < 50) return;
+            // RTL: swipe right → previous, swipe left → next
+            goLightbox(dx > 0 ? -1 : 1);
+          }}
+        >
+          <div className="flex items-center justify-between px-4 py-3 text-white">
+            <button
+              type="button"
+              aria-label="بستن"
+              className="inline-flex size-9 items-center justify-center rounded-full bg-white/15 hover:bg-white/25"
+              onClick={() => setLightboxOpen(false)}
+            >
+              <X className="size-4" />
+            </button>
+            {images.length > 1 ? (
+              <span className="text-[13px] tabular-nums text-white/80">
+                {toPersianDigits(String(activeImage + 1))} /{" "}
+                {toPersianDigits(String(images.length))}
+              </span>
+            ) : (
+              <span />
+            )}
+          </div>
+
+          <div
+            className="relative flex min-h-0 flex-1 items-center justify-center px-12 pb-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {images.length > 1 ? (
+              <>
+                <button
+                  type="button"
+                  aria-label="تصویر بعدی"
+                  className="absolute start-2 top-1/2 z-10 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 sm:start-4"
+                  onClick={() => goLightbox(1)}
+                >
+                  <ChevronRight className="size-5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="تصویر قبلی"
+                  className="absolute end-2 top-1/2 z-10 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 sm:end-4"
+                  onClick={() => goLightbox(-1)}
+                >
+                  <ChevronLeft className="size-5" />
+                </button>
+              </>
+            ) : null}
+
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={activeSrc}
+              alt={product.name}
+              className="max-h-[68vh] max-w-[min(100%,560px)] rounded-lg bg-white object-contain p-4 shadow-lg"
+              draggable={false}
+            />
+          </div>
+
+          {images.length > 1 ? (
+            <div
+              className="flex justify-center gap-2 overflow-x-auto px-4 pb-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {images.map((src, i) => (
+                <button
+                  key={`${src}-lb-${i}`}
+                  type="button"
+                  onClick={() => setActiveImage(i)}
+                  className={cn(
+                    "size-12 shrink-0 overflow-hidden rounded-md border-2 bg-white/90 transition sm:size-14",
+                    i === activeImage
+                      ? "border-primary"
+                      : "border-transparent opacity-70 hover:opacity-100",
+                  )}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="" className="size-full object-contain p-0.5" />
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-const COLOR_MAP: Record<string, string> = {
-  مشکی: "#111111",
-  سیاه: "#111111",
-  سفید: "#f5f5f5",
-  قرمز: "#e11d48",
-  آبی: "#2563eb",
-  سبز: "#16a34a",
-  زرد: "#eab308",
-  نارنجی: "#f97316",
-  صورتی: "#ec4899",
-  بنفش: "#7c3aed",
-  خاکستری: "#6b7280",
-  طوسی: "#9ca3af",
-  طلایی: "#ca8a04",
-  نقره‌ای: "#a3a3a3",
-  کرم: "#f5e6c8",
-  قهوه‌ای: "#92400e",
-};
-
-function guessColor(label: string) {
-  const key = Object.keys(COLOR_MAP).find((k) => label.includes(k));
-  return key ? COLOR_MAP[key] : "#d4d4d8";
-}
-
-function isLightColor(label: string) {
-  return /سفید|کرم|زرد|نقره/.test(label);
-}

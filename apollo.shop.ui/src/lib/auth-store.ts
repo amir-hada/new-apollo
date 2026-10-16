@@ -1,28 +1,37 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { getClientTenantSlug } from "@/lib/tenant";
 import type { AuthResponse, UserInfo } from "@/types/api";
+
+const ACCESS_KEY = "access_token";
+const REFRESH_KEY = "refresh_token";
+const GUEST_KEY = "guest_token";
+const AUTH_PERSIST_NAME = "apollo-auth";
 
 function tenantKey(base: string) {
   if (typeof window === "undefined") return base;
   return `${base}:${getClientTenantSlug()}`;
 }
 
-const ACCESS_KEY = "access_token";
-const REFRESH_KEY = "refresh_token";
-const GUEST_KEY = "guest_token";
+/** In-memory access tokens keyed by tenant slug (avoids cross-tenant leaks). */
+const memoryAccessByTenant: Record<string, string | null> = {};
 
-let memoryAccessToken: string | null = null;
+function currentSlug() {
+  if (typeof window === "undefined") return "ssr";
+  return getClientTenantSlug();
+}
 
 export function getAccessToken() {
-  if (typeof window === "undefined") return memoryAccessToken;
-  return memoryAccessToken ?? localStorage.getItem(tenantKey(ACCESS_KEY));
+  const slug = currentSlug();
+  if (typeof window === "undefined") return memoryAccessByTenant[slug] ?? null;
+  return memoryAccessByTenant[slug] ?? localStorage.getItem(tenantKey(ACCESS_KEY));
 }
 
 export function setAccessToken(token: string | null) {
-  memoryAccessToken = token;
+  const slug = currentSlug();
+  memoryAccessByTenant[slug] = token;
   if (typeof window === "undefined") return;
   const key = tenantKey(ACCESS_KEY);
   if (token) localStorage.setItem(key, token);
@@ -52,9 +61,17 @@ export function getGuestToken() {
   return token;
 }
 
+/** Drop session for the current tenant only. */
+export function clearCurrentTenantSession() {
+  setAccessToken(null);
+  setRefreshToken(null);
+  useAuthStore.setState({ user: null });
+}
+
 interface AuthState {
   user: UserInfo | null;
   hydrated: boolean;
+  tenantSlug: string | null;
   setSession: (auth: AuthResponse) => void;
   clearSession: () => void;
   setHydrated: (value: boolean) => void;
@@ -63,20 +80,36 @@ interface AuthState {
   isPlatformAdmin: () => boolean;
 }
 
+const tenantScopedStorage = createJSONStorage(() => ({
+  getItem: (name) => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(`${name}:${getClientTenantSlug()}`);
+  },
+  setItem: (name, value) => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(`${name}:${getClientTenantSlug()}`, value);
+  },
+  removeItem: (name) => {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem(`${name}:${getClientTenantSlug()}`);
+  },
+}));
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
       hydrated: false,
+      tenantSlug: null,
       setSession: (auth) => {
         setAccessToken(auth.accessToken);
         setRefreshToken(auth.refreshToken);
-        set({ user: auth.user });
+        set({ user: auth.user, tenantSlug: getClientTenantSlug() });
       },
       clearSession: () => {
         setAccessToken(null);
         setRefreshToken(null);
-        set({ user: null });
+        set({ user: null, tenantSlug: getClientTenantSlug() });
       },
       setHydrated: (value) => set({ hydrated: value }),
       isAuthenticated: () => Boolean(get().user && getAccessToken()),
@@ -84,13 +117,26 @@ export const useAuthStore = create<AuthState>()(
       isPlatformAdmin: () => Boolean(get().user?.roles?.includes("PlatformAdmin")),
     }),
     {
-      name: "apollo-auth",
-      partialize: (state) => ({ user: state.user }),
+      name: AUTH_PERSIST_NAME,
+      storage: tenantScopedStorage,
+      partialize: (state) => ({
+        user: state.user,
+        tenantSlug: state.tenantSlug,
+      }),
       onRehydrateStorage: () => (state) => {
-        state?.setHydrated(true);
         if (typeof window !== "undefined") {
-          memoryAccessToken = localStorage.getItem(tenantKey(ACCESS_KEY));
+          const slug = getClientTenantSlug();
+          memoryAccessByTenant[slug] = localStorage.getItem(tenantKey(ACCESS_KEY));
+          // Stale user without a token for this tenant → treat as logged out.
+          if (state?.user && !memoryAccessByTenant[slug]) {
+            state.clearSession();
+          }
+          // Persist was for another slug (shouldn't happen with scoped storage, but belt+suspenders).
+          if (state?.tenantSlug && state.tenantSlug !== slug) {
+            state.clearSession();
+          }
         }
+        state?.setHydrated(true);
       },
     },
   ),

@@ -47,4 +47,13 @@ public interface IUserPlatformService
         Guid userId,
         Guid platformId,
         CancellationToken cancellationToken = default);
+
+    Task AdminDeleteSiteAsync(
+        Guid platformId,
+        CancellationToken cancellationToken = default);
+
+    Task AdminSetSiteActiveAsync(
+        Guid platformId,
+        bool isActive,
+        CancellationToken cancellationToken = default);
 }

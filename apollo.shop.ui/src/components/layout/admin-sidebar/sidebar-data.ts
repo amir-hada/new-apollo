@@ -1,10 +1,8 @@
 import {
-  AudioWaveform,
   Award,
   Command,
   FileText,
   FolderTree,
-  GalleryVerticalEnd,
   LayoutDashboard,
   MessagesSquare,
   Package,
@@ -24,16 +22,6 @@ export const sidebarData: SidebarData = {
       logo: Command,
       plan: "پنل مدیریت",
     },
-    {
-      name: "آپولو شاپ",
-      logo: GalleryVerticalEnd,
-      plan: "سازمانی",
-    },
-    {
-      name: "فروشگاه آزمایشی",
-      logo: AudioWaveform,
-      plan: "استارتاپ",
-    },
   ],
   navGroups: [
     {
@@ -52,7 +40,6 @@ export const sidebarData: SidebarData = {
         {
           title: "پشتیبانی",
           url: "/admin/chats",
-          badge: "۳",
           icon: MessagesSquare,
         },
         {
@@ -79,13 +66,7 @@ export const sidebarData: SidebarData = {
           icon: FileText,
           items: [
             { title: "بلاگ", url: "/admin/blog", icon: FileText },
-            { title: "تیکت‌ها", url: "/admin/tickets", icon: MessagesSquare },
           ],
-        },
-        {
-          title: "فروشگاه‌های جدید",
-          url: "/admin/tenants",
-          icon: Store,
         },
         {
           title: "تنظیمات",

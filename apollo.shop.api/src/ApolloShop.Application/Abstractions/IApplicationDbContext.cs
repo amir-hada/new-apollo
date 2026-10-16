@@ -58,5 +58,8 @@ public interface IApplicationDbContext
     DbSet<TicketMessage> TicketMessages { get; }
     DbSet<TicketAttachment> TicketAttachments { get; }
 
+    DbSet<ChatConversation> ChatConversations { get; }
+    DbSet<ChatMessage> ChatMessages { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -13,11 +13,12 @@ import {
 } from "@/components/ui/dialog";
 import { FloatingField } from "@/components/ui/floating-field";
 import { FloatingSelect } from "@/components/ui/floating-select";
+import { ProductSpecsEditor } from "@/features/admin/products/product-specs-editor";
 import { normalizeDigits, formatGroupedPersianDigits } from "@/features/auth/normalize-phone";
 import type { CategoryRow } from "@/features/admin/categories/data";
 import { priceToPersianWords } from "@/lib/persian-number-words";
 import { useShopCurrency } from "@/providers/ShopCurrencyProvider";
-import type { Brand, CreateProductRequest } from "@/types/api";
+import type { Brand, CreateProductRequest, ProductSpec } from "@/types/api";
 
 export type CreateProductPayload = CreateProductRequest;
 
@@ -54,11 +55,13 @@ export function ProductsAddDialog({
 }: ProductsAddDialogProps) {
   const shopCurrency = useShopCurrency();
   const [form, setForm] = useState(emptyForm);
+  const [specs, setSpecs] = useState<ProductSpec[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setForm(emptyForm);
+    setSpecs([]);
     setError(null);
   }, [open]);
 
@@ -120,6 +123,29 @@ export function ProductsAddDialog({
     const name = form.name.trim();
     const description = form.description.trim() || name;
 
+    const cleanedSpecs = specs
+      .map((s, index) => ({
+        id: s.id,
+        name: s.name.trim(),
+        isOrderParameter:
+          s.isOrderParameter && s.values.filter((v) => v.value.trim()).length >= 2,
+        sortOrder: index + 1,
+        values: s.values
+          .filter((v) => v.value.trim())
+          .map((v, vi) => ({
+            id: v.id,
+            value: v.value.trim(),
+            priceAdjustment:
+              s.isOrderParameter &&
+              s.values.filter((x) => x.value.trim()).length >= 2
+                ? v.priceAdjustment || 0
+                : 0,
+            sortOrder: vi + 1,
+            colorHex: v.colorHex?.trim() || null,
+          })),
+      }))
+      .filter((s) => s.name && s.values.length > 0);
+
     await onSubmit({
       name,
       slug: slugFromName(name),
@@ -148,14 +174,17 @@ export function ProductsAddDialog({
       ogImageUrl: null,
       sku: null,
       images: [],
-      specs: [],
+      specs: cleanedSpecs,
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className="sm:max-w-lg">
-        <div className="flex items-center justify-between gap-3">
+      <DialogContent
+        showCloseButton={false}
+        className="flex max-h-[min(92vh,820px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
           <DialogTitle className="leading-none">افزودن محصول</DialogTitle>
           <DialogClose
             render={
@@ -172,92 +201,101 @@ export function ProductsAddDialog({
           </DialogClose>
         </div>
 
-        <form className="grid gap-4" onSubmit={handleSubmit}>
-          <FloatingField
-            label="نام"
-            required
-            surfaceClassName={surface}
-            value={form.name}
-            onChange={(value) => setForm((f) => ({ ...f, name: value }))}
-          />
-
-          <FloatingSelect
-            label="دسته‌بندی"
-            emptyValue="none"
-            surfaceClassName={surface}
-            value={form.categoryId}
-            onChange={(value) =>
-              setForm((f) => ({ ...f, categoryId: value }))
-            }
-            options={
-              hasCategories
-                ? categoryOptions
-                : [{ value: "none", label: "بدون دسته‌بندی" }]
-            }
-            inactive={!hasCategories}
-            searchPlaceholder="جستجو ..."
-            onInactiveClick={() =>
-              toast.error("در حال حاضر هیچ دسته بندی وجود ندارد", {
-                id: "product-category-empty",
-              })
-            }
-          />
-
-          <FloatingSelect
-            label="برند"
-            emptyValue="none"
-            surfaceClassName={surface}
-            value={form.brandId}
-            onChange={(value) => setForm((f) => ({ ...f, brandId: value }))}
-            options={
-              hasBrands
-                ? brandOptions
-                : [{ value: "none", label: "بدون برند" }]
-            }
-            inactive={!hasBrands}
-            searchPlaceholder="جستجو ..."
-            onInactiveClick={() =>
-              toast.error("در حال حاضر هیچ برندی وجود ندارد", {
-                id: "product-brand-empty",
-              })
-            }
-          />
-
-          <FloatingField
-            label="توضیحات"
-            surfaceClassName={surface}
-            value={form.description}
-            onChange={(value) =>
-              setForm((f) => ({ ...f, description: value }))
-            }
-          />
-
-          <div className="space-y-1.5">
+        <form
+          className="flex min-h-0 flex-1 flex-col"
+          onSubmit={handleSubmit}
+        >
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
             <FloatingField
-              label="قیمت اصلی"
+              label="نام"
               required
-              dir="ltr"
               surfaceClassName={surface}
-              value={formatGroupedPersianDigits(form.basePrice)}
+              value={form.name}
+              onChange={(value) => setForm((f) => ({ ...f, name: value }))}
+            />
+
+            <FloatingSelect
+              label="دسته‌بندی"
+              emptyValue="none"
+              surfaceClassName={surface}
+              value={form.categoryId}
               onChange={(value) =>
-                setForm((f) => ({
-                  ...f,
-                  basePrice: normalizeDigits(value),
-                }))
+                setForm((f) => ({ ...f, categoryId: value }))
+              }
+              options={
+                hasCategories
+                  ? categoryOptions
+                  : [{ value: "none", label: "بدون دسته‌بندی" }]
+              }
+              inactive={!hasCategories}
+              searchPlaceholder="جستجو ..."
+              onInactiveClick={() =>
+                toast.error("در حال حاضر هیچ دسته بندی وجود ندارد", {
+                  id: "product-category-empty",
+                })
               }
             />
-            {priceWords ? (
-              <p className="px-1 text-xs font-light text-muted-foreground">
-                {priceWords}
-              </p>
+
+            <FloatingSelect
+              label="برند"
+              emptyValue="none"
+              surfaceClassName={surface}
+              value={form.brandId}
+              onChange={(value) => setForm((f) => ({ ...f, brandId: value }))}
+              options={
+                hasBrands
+                  ? brandOptions
+                  : [{ value: "none", label: "بدون برند" }]
+              }
+              inactive={!hasBrands}
+              searchPlaceholder="جستجو ..."
+              onInactiveClick={() =>
+                toast.error("در حال حاضر هیچ برندی وجود ندارد", {
+                  id: "product-brand-empty",
+                })
+              }
+            />
+
+            <FloatingField
+              label="توضیحات"
+              surfaceClassName={surface}
+              value={form.description}
+              onChange={(value) =>
+                setForm((f) => ({ ...f, description: value }))
+              }
+            />
+
+            <div className="space-y-1.5">
+              <FloatingField
+                label="قیمت اصلی"
+                required
+                dir="ltr"
+                surfaceClassName={surface}
+                value={formatGroupedPersianDigits(form.basePrice)}
+                onChange={(value) =>
+                  setForm((f) => ({
+                    ...f,
+                    basePrice: normalizeDigits(value),
+                  }))
+                }
+              />
+              {priceWords ? (
+                <p className="px-1 text-xs font-light text-muted-foreground">
+                  {priceWords}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2 border-t border-border pt-3">
+              <ProductSpecsEditor specs={specs} onChange={setSpecs} compact />
+            </div>
+
+            {error ? (
+              <p className="text-sm text-destructive">{error}</p>
             ) : null}
           </div>
 
-          {error ? (
-            <p className="text-sm text-destructive">{error}</p>
-          ) : null}
-
-          <DialogFooter className="gap-2">
+          <DialogFooter className="shrink-0 gap-2 border-t border-border px-4 py-3 sm:px-5">
             <Button
               type="button"
               variant="outline"

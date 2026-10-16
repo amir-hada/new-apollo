@@ -88,7 +88,7 @@ export function OtpInput({
   }
 
   return (
-    <div dir="ltr" className={cn("flex items-center justify-center gap-2.5", className)}>
+    <div dir="ltr" className={cn("flex items-center justify-center gap-1.5 sm:gap-2.5", className)}>
       {digits.map((digit, index) => (
         <input
           key={index}
@@ -104,7 +104,7 @@ export function OtpInput({
           aria-label={`رقم ${index + 1} کد تأیید`}
           aria-invalid={invalid || undefined}
           className={cn(
-            "h-12 w-11 rounded-lg border border-border bg-card text-center text-lg font-medium text-foreground outline-none transition",
+            "h-11 w-10 rounded-lg border border-border bg-card text-center text-base font-medium text-foreground outline-none transition sm:h-12 sm:w-11 sm:text-lg",
             "focus:border-foreground",
             invalid && "border-red-500 focus:border-red-500",
             disabled && "cursor-not-allowed opacity-50",

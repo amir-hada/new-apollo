@@ -84,22 +84,24 @@ export function DataTablePagination<TData extends RowData>({
             <ChevronRight className="size-4" />
           </Button>
 
-          {pageNumbers.map((pageNumber, index) => (
-            <div key={`${pageNumber}-${index}`} className="flex items-center">
-              {pageNumber === "..." ? (
-                <span className="px-1 text-sm text-muted-foreground">...</span>
-              ) : (
-                <Button
-                  variant={currentPage === pageNumber ? "default" : "outline"}
-                  className="h-8 min-w-8 px-2 tabular-nums"
-                  onClick={() => table.setPageIndex((pageNumber as number) - 1)}
-                >
-                  <span className="sr-only">رفتن به صفحه {pageNumber}</span>
-                  {pageNumber}
-                </Button>
-              )}
-            </div>
-          ))}
+          <div className="hidden items-center gap-2 sm:flex">
+            {pageNumbers.map((pageNumber, index) => (
+              <div key={`${pageNumber}-${index}`} className="flex items-center">
+                {pageNumber === "..." ? (
+                  <span className="px-1 text-sm text-muted-foreground">...</span>
+                ) : (
+                  <Button
+                    variant={currentPage === pageNumber ? "default" : "outline"}
+                    className="h-8 min-w-8 px-2 tabular-nums"
+                    onClick={() => table.setPageIndex((pageNumber as number) - 1)}
+                  >
+                    <span className="sr-only">رفتن به صفحه {pageNumber}</span>
+                    {pageNumber}
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
 
           <Button
             variant="outline"

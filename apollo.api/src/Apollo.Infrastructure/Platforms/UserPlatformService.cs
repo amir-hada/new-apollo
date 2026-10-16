@@ -313,6 +313,7 @@ public sealed class UserPlatformService : IUserPlatformService
                 platform.AdminUrl,
                 platform.ProvisioningStatus,
                 platform.ProvisioningError,
+                platform.IsActive,
                 platform.CreatedAtUtc);
 
         return await query.ToListAsync(cancellationToken);
@@ -329,8 +330,121 @@ public sealed class UserPlatformService : IUserPlatformService
                 cancellationToken)
             ?? throw new NotFoundException("پلتفرم یافت نشد.");
 
+        await DeleteShopTenantBestEffortAsync(platform, cancellationToken);
+
         _dbContext.UserPlatforms.Remove(platform);
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task AdminDeleteSiteAsync(
+        Guid platformId,
+        CancellationToken cancellationToken = default)
+    {
+        var platform = await _dbContext.UserPlatforms
+            .Include(item => item.Plan)
+            .FirstOrDefaultAsync(item => item.Id == platformId, cancellationToken)
+            ?? throw new NotFoundException("سایت یافت نشد.");
+
+        if (platform.Plan.ProductType != PlanProductType.Shop)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["platformId"] = ["این رکورد از نوع فروشگاه نیست."],
+            });
+        }
+
+        await DeleteShopTenantRequiredAsync(platform, cancellationToken);
+
+        _dbContext.UserPlatforms.Remove(platform);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task AdminSetSiteActiveAsync(
+        Guid platformId,
+        bool isActive,
+        CancellationToken cancellationToken = default)
+    {
+        var platform = await _dbContext.UserPlatforms
+            .Include(item => item.Plan)
+            .FirstOrDefaultAsync(item => item.Id == platformId, cancellationToken)
+            ?? throw new NotFoundException("سایت یافت نشد.");
+
+        if (platform.Plan.ProductType != PlanProductType.Shop)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["platformId"] = ["این رکورد از نوع فروشگاه نیست."],
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(platform.TenantSlug))
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["platformId"] = ["فروشگاه هنوز ساخته نشده و قابل تعلیق/فعال‌سازی نیست."],
+            });
+        }
+
+        try
+        {
+            await _shopClient.SetTenantActiveAsync(platform.TenantSlug, isActive, cancellationToken);
+        }
+        catch (ShopProvisioningException exception)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["shop"] = [exception.Message],
+            });
+        }
+
+        platform.IsActive = isActive;
+        platform.UpdatedAtUtc = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task DeleteShopTenantRequiredAsync(
+        UserPlatform platform,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(platform.TenantSlug))
+        {
+            return;
+        }
+
+        try
+        {
+            await _shopClient.DeleteTenantAsync(platform.TenantSlug, cancellationToken);
+        }
+        catch (ShopProvisioningException exception)
+        {
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["shop"] = [exception.Message],
+            });
+        }
+    }
+
+    private async Task DeleteShopTenantBestEffortAsync(
+        UserPlatform platform,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(platform.TenantSlug))
+        {
+            return;
+        }
+
+        try
+        {
+            await _shopClient.DeleteTenantAsync(platform.TenantSlug, cancellationToken);
+        }
+        catch (ShopProvisioningException exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Failed to delete shop tenant {Slug} for platform {PlatformId}.",
+                platform.TenantSlug,
+                platform.Id);
+        }
     }
 
     private async Task<UserPlatform> LoadOwnedPlatformAsync(
@@ -403,6 +517,7 @@ public sealed class UserPlatformService : IUserPlatformService
             platform.AdminUrl = _shopClient.BuildAdminUrl(result.Slug);
             platform.ProvisioningStatus = SiteProvisioningStatus.Ready;
             platform.ProvisioningError = null;
+            platform.IsActive = true;
         }
         catch (ShopProvisioningException exception)
         {

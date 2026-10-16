@@ -48,6 +48,8 @@ public class GetShopSettingsQueryHandler : IRequestHandler<GetShopSettingsQuery,
         Description = "فروشگاه اینترنتی آپولو — خرید آنلاین با تجربه مدرن، سریع و حرفه‌ای.",
         MetaDescription = "فروشگاه اینترنتی آپولو — خرید آنلاین با تجربه مدرن، سریع و حرفه‌ای.",
         PrimaryColor = "#0f172a",
+        SmsOtpEnabled = true,
+        SmsOrderEnabled = true,
         CreatedAtUtc = DateTime.UtcNow,
         CreatedBy = "system"
     };
@@ -65,6 +67,9 @@ public class GetShopSettingsQueryHandler : IRequestHandler<GetShopSettingsQuery,
         s.Description,
         s.MetaDescription,
         s.PrimaryColor,
+        s.IndustryKey,
         HeroBannerSerializer.Deserialize(s.HeroBannersJson),
-        HomeStorySerializer.Deserialize(s.HomeStoriesJson));
+        HomeStorySerializer.Deserialize(s.HomeStoriesJson),
+        s.SmsOtpEnabled,
+        s.SmsOrderEnabled);
 }

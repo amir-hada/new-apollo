@@ -221,6 +221,7 @@ public class ProductSpecificationValueConfiguration : IEntityTypeConfiguration<P
         builder.Property(x => x.Id).ValueGeneratedNever();
 
         builder.Property(x => x.Value).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.ColorHex).HasMaxLength(16);
         builder.Property(x => x.PriceAdjustment).HasPrecision(18, 2);
     }
 }

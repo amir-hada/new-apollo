@@ -54,7 +54,7 @@ public class ApiIntegrationTests : IClassFixture<ApolloShopWebApplicationFactory
     }
 
     [Fact]
-    public async Task Otp_send_and_verify_creates_customer()
+    public async Task Otp_send_does_not_expose_code_in_response()
     {
         var phone = "0912" + Random.Shared.Next(1000000, 9999999).ToString();
 
@@ -63,23 +63,9 @@ public class ApiIntegrationTests : IClassFixture<ApolloShopWebApplicationFactory
 
         var otpPayload = await send.Content.ReadFromJsonAsync<SendOtpResponseDto>();
         otpPayload.Should().NotBeNull();
-        otpPayload!.DevCode.Should().NotBeNullOrWhiteSpace();
+        otpPayload!.DevCode.Should().BeNull();
         otpPayload.ExpiresInSeconds.Should().Be(120);
         otpPayload.PhoneNumber.Should().Be(phone);
-
-        var verify = await _client.PostAsJsonAsync("/api/auth/otp/verify", new
-        {
-            phoneNumber = phone,
-            code = otpPayload.DevCode
-        });
-
-        verify.StatusCode.Should().Be(HttpStatusCode.OK);
-        var auth = await verify.Content.ReadFromJsonAsync<LoginResponse>();
-        auth.Should().NotBeNull();
-        auth!.AccessToken.Should().NotBeNullOrWhiteSpace();
-        auth.User.PhoneNumber.Should().Be(phone);
-        auth.User.Roles.Should().Contain("Customer");
-        auth.User.Email.Should().Be($"{phone}@users.apolloshop.local");
     }
 
     private sealed record SendOtpResponseDto(

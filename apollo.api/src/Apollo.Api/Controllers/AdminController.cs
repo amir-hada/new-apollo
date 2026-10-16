@@ -1,8 +1,11 @@
 using System.Security.Claims;
+using Apollo.Application.Abstractions.Sms;
 using Apollo.Application.Common.Exceptions;
 using Apollo.Application.Features.Admin.Commands.CreatePlan;
 using Apollo.Application.Features.Admin.Commands.DeletePlan;
+using Apollo.Application.Features.Admin.Commands.DeleteSite;
 using Apollo.Application.Features.Admin.Commands.DeleteUser;
+using Apollo.Application.Features.Admin.Commands.SetSiteActiveStatus;
 using Apollo.Application.Features.Admin.Commands.SetUserActiveStatus;
 using Apollo.Application.Features.Admin.Commands.UpdatePlan;
 using Apollo.Application.Features.Admin.Queries.GetPlanById;
@@ -23,10 +26,12 @@ namespace Apollo.Api.Controllers;
 public sealed class AdminController : ControllerBase
 {
     private readonly ISender _sender;
+    private readonly IPlatformSmsSettingsService _smsSettings;
 
-    public AdminController(ISender sender)
+    public AdminController(ISender sender, IPlatformSmsSettingsService smsSettings)
     {
         _sender = sender;
+        _smsSettings = smsSettings;
     }
 
     [HttpGet("users")]
@@ -71,6 +76,33 @@ public sealed class AdminController : ControllerBase
     {
         var sites = await _sender.Send(new GetAdminSitesQuery(), cancellationToken);
         return Ok(sites);
+    }
+
+    [HttpPatch("sites/{platformId:guid}/status")]
+    public async Task<IActionResult> SetSiteStatus(
+        Guid platformId,
+        [FromBody] SetUserStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _sender.Send(
+            new SetAdminSiteActiveStatusCommand(platformId, request.IsActive),
+            cancellationToken);
+
+        return Ok(new
+        {
+            message = request.IsActive
+                ? "سایت با موفقیت فعال شد."
+                : "سایت با موفقیت تعلیق شد.",
+        });
+    }
+
+    [HttpDelete("sites/{platformId:guid}")]
+    public async Task<IActionResult> DeleteSite(
+        Guid platformId,
+        CancellationToken cancellationToken)
+    {
+        await _sender.Send(new DeleteAdminSiteCommand(platformId), cancellationToken);
+        return Ok(new { message = "سایت با موفقیت حذف شد." });
     }
 
     [HttpGet("plans")]
@@ -143,6 +175,22 @@ public sealed class AdminController : ControllerBase
     {
         await _sender.Send(new DeletePlanCommand(planId), cancellationToken);
         return Ok(new { message = "پلن با موفقیت حذف شد." });
+    }
+
+    [HttpGet("sms-settings")]
+    public async Task<IActionResult> GetSmsSettings(CancellationToken cancellationToken)
+    {
+        var settings = await _smsSettings.GetAsync(cancellationToken);
+        return Ok(settings);
+    }
+
+    [HttpPut("sms-settings")]
+    public async Task<IActionResult> UpdateSmsSettings(
+        [FromBody] UpdatePlatformSmsSettingsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var settings = await _smsSettings.UpdateAsync(request, cancellationToken);
+        return Ok(settings);
     }
 
     private Guid GetUserId()

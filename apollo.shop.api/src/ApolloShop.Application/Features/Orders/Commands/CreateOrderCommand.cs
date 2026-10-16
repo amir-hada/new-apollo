@@ -16,12 +16,18 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _currentUser;
     private readonly IDateTimeProvider _clock;
+    private readonly ISmsSender _smsSender;
 
-    public CreateOrderCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, IDateTimeProvider clock)
+    public CreateOrderCommandHandler(
+        IApplicationDbContext db,
+        ICurrentUser currentUser,
+        IDateTimeProvider clock,
+        ISmsSender smsSender)
     {
         _db = db;
         _currentUser = currentUser;
         _clock = clock;
+        _smsSender = smsSender;
     }
 
     public async Task<OrderDetailDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
@@ -166,6 +172,32 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
 
         await _db.SaveChangesAsync(cancellationToken);
 
+        await TrySendOrderSmsAsync(address.Phone, order, cancellationToken);
+
         return OrderMapper.ToDetail(order, _currentUser.Email);
+    }
+
+    private async Task TrySendOrderSmsAsync(string? phone, Order order, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(phone))
+        {
+            return;
+        }
+
+        var settings = await _db.ShopSettings.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+        if (settings is null || !settings.SmsOrderEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            var total = $"{order.GrandTotal:N0}";
+            await _smsSender.SendOrderAsync(phone, order.OrderNumber, total, cancellationToken);
+        }
+        catch
+        {
+            // Order is already persisted; SMS failures must not roll back checkout.
+        }
     }
 }

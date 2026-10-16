@@ -2,7 +2,7 @@
 
 import { type DragEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -283,6 +283,7 @@ function productToForm(p: ProductDetail): FormState {
               value: v.value,
               priceAdjustment: v.priceAdjustment ?? 0,
               sortOrder: v.sortOrder ?? vi + 1,
+              colorHex: v.colorHex ?? null,
             }))
           : [
               {
@@ -290,6 +291,7 @@ function productToForm(p: ProductDetail): FormState {
                 value: "",
                 priceAdjustment: 0,
                 sortOrder: 1,
+                colorHex: null,
               },
             ],
     })),
@@ -298,6 +300,7 @@ function productToForm(p: ProductDetail): FormState {
 
 export function AdminProductEdit() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const id = params.id;
   const queryClient = useQueryClient();
   const shopCurrency = useShopCurrency();
@@ -305,7 +308,10 @@ export function AdminProductEdit() {
   const [error, setError] = useState<string | null>(null);
   const [uploadingPrimary, setUploadingPrimary] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
-  const [tab, setTab] = useState("basic");
+  const initialTab = searchParams.get("tab");
+  const [tab, setTab] = useState(
+    initialTab === "reports" ? "reports" : "basic",
+  );
   const [primaryDragOver, setPrimaryDragOver] = useState(false);
   const [galleryDragOver, setGalleryDragOver] = useState(false);
   const [galleryReorderFrom, setGalleryReorderFrom] = useState<number | null>(
@@ -529,6 +535,7 @@ export function AdminProductEdit() {
                   ? v.priceAdjustment || 0
                   : 0,
               sortOrder: vi + 1,
+              colorHex: v.colorHex?.trim() || null,
             })),
         }))
         .filter((s) => s.name && s.values.length > 0),

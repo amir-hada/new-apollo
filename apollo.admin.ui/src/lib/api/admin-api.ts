@@ -9,6 +9,10 @@ import {
   type UpdatePlanRequest,
 } from "./plan-types"
 import type { AdminSiteListItem } from "./site-types"
+import type {
+  PlatformSmsSettings,
+  UpdatePlatformSmsSettingsRequest,
+} from "./sms-settings-types"
 
 function normalizeAdminUser(user: AdminUserListItem): AdminUserListItem {
   return {
@@ -67,7 +71,26 @@ export const adminApi = {
     return sites.map((site) => ({
       ...site,
       productType: normalizePlanProductType(site.productType),
+      isActive: site.isActive !== false,
     }))
+  },
+
+  setSiteStatus(platformId: string, isActive: boolean) {
+    return apiRequest<{ message: string }>(
+      `/api/admin/sites/${platformId}/status`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ isActive }),
+        auth: true,
+      }
+    )
+  },
+
+  deleteSite(platformId: string) {
+    return apiRequest<{ message: string }>(`/api/admin/sites/${platformId}`, {
+      method: "DELETE",
+      auth: true,
+    })
   },
 
   async getPlans() {
@@ -108,6 +131,20 @@ export const adminApi = {
   deletePlan(planId: string) {
     return apiRequest<{ message: string }>(`/api/admin/plans/${planId}`, {
       method: "DELETE",
+      auth: true,
+    })
+  },
+
+  getSmsSettings() {
+    return apiRequest<PlatformSmsSettings>("/api/admin/sms-settings", {
+      auth: true,
+    })
+  },
+
+  updateSmsSettings(request: UpdatePlatformSmsSettingsRequest) {
+    return apiRequest<PlatformSmsSettings>("/api/admin/sms-settings", {
+      method: "PUT",
+      body: JSON.stringify(request),
       auth: true,
     })
   },

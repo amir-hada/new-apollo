@@ -100,7 +100,7 @@ internal static class ProductMapper
                     s.IsOrderParameter,
                     s.SortOrder,
                     s.Values.OrderBy(v => v.SortOrder)
-                        .Select(v => new ProductSpecValueDto(v.Id, v.Value, v.PriceAdjustment, v.SortOrder))
+                        .Select(v => new ProductSpecValueDto(v.Id, v.Value, v.PriceAdjustment, v.SortOrder, v.ColorHex))
                         .ToList()))
                 .ToList(),
             p.Variants

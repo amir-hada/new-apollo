@@ -3,7 +3,6 @@
 import { Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AdminShell } from "@/components/layout/AdminShell";
-import { AdminTopNav } from "@/components/layout/admin-top-nav";
 import { AuthGuard } from "@/components/shared/AuthGuard";
 import { SsoExchange } from "@/features/auth/SsoExchange";
 import { getAdminPageTitle } from "@/lib/admin-page-title";
@@ -32,7 +31,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isDashboard = pathname === "/admin" || pathname === "/admin/reports";
   const isChats = pathname.startsWith("/admin/chats");
   const isSettings = pathname.startsWith("/admin/settings");
   const isProductEdit = /^\/admin\/products\/[^/]+$/.test(pathname);
@@ -52,26 +50,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               : "flex flex-1 flex-col gap-4 sm:gap-6"
         }
         headerExtra={
-          isDashboard ? (
-            <AdminTopNav
-              className="me-auto"
-              links={[
-                {
-                  title: "نمای کلی",
-                  href: "/admin",
-                  isActive: pathname === "/admin",
-                },
-                {
-                  title: "گزارش‌ها",
-                  href: "/admin/reports",
-                  isActive: pathname === "/admin/reports",
-                },
-                { title: "محصولات", href: "/admin/products" },
-                { title: "تنظیمات", href: "/admin/settings" },
-              ]}
-            />
-          ) : pageTitle ? (
-            <h1 className="me-auto text-base font-semibold tracking-tight">
+          pageTitle ? (
+            <h1 className="me-auto min-w-0 truncate text-sm font-semibold tracking-tight sm:text-base">
               {pageTitle}
             </h1>
           ) : undefined

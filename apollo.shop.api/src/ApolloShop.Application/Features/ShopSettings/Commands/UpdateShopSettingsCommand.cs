@@ -1,4 +1,5 @@
 using ApolloShop.Application.Abstractions;
+using ApolloShop.Application.Features.ShopSettings;
 using ApolloShop.Application.Features.ShopSettings.DTOs;
 using ApolloShop.Application.Features.ShopSettings.Queries;
 using MediatR;
@@ -29,6 +30,9 @@ public class UpdateShopSettingsCommandHandler : IRequestHandler<UpdateShopSettin
         }
 
         var r = request.Request;
+        var previousIndustry = settings.IndustryKey;
+        var nextIndustry = ShopIndustryKeys.Normalize(r.IndustryKey);
+
         settings.ShopTitle = r.ShopTitle.Trim();
         settings.BrowserTitle = r.BrowserTitle.Trim();
         settings.LogoUrl = NormalizeUrl(r.LogoUrl);
@@ -40,6 +44,28 @@ public class UpdateShopSettingsCommandHandler : IRequestHandler<UpdateShopSettin
         settings.Description = NormalizeOptional(r.Description);
         settings.MetaDescription = NormalizeOptional(r.MetaDescription);
         settings.PrimaryColor = NormalizePrimaryColor(r.PrimaryColor);
+        settings.IndustryKey = nextIndustry;
+        if (r.SmsOtpEnabled is bool otpEnabled)
+        {
+            settings.SmsOtpEnabled = otpEnabled;
+        }
+
+        if (r.SmsOrderEnabled is bool orderEnabled)
+        {
+            settings.SmsOrderEnabled = orderEnabled;
+        }
+
+        var industryChanged = !string.Equals(
+            previousIndustry,
+            nextIndustry,
+            StringComparison.OrdinalIgnoreCase);
+
+        await ShopIndustryCategorySync.ApplyAsync(
+            _db,
+            _tenant.TenantId,
+            nextIndustry,
+            deactivateOthers: industryChanged || string.IsNullOrWhiteSpace(previousIndustry),
+            cancellationToken);
 
         await _db.SaveChangesAsync(cancellationToken);
         return GetShopSettingsQueryHandler.Map(settings);

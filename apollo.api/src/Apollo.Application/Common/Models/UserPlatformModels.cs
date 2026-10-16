@@ -87,4 +87,5 @@ public sealed record AdminSiteListItemDto(
     string? AdminUrl,
     SiteProvisioningStatus ProvisioningStatus,
     string? ProvisioningError,
+    bool IsActive,
     DateTime CreatedAtUtc);

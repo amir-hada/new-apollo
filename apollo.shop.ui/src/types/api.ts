@@ -50,7 +50,6 @@ export interface SendOtpRequest {
 export interface SendOtpResponse {
   phoneNumber: string;
   expiresInSeconds: number;
-  devCode?: string | null;
 }
 
 export interface VerifyOtpRequest {
@@ -90,6 +89,8 @@ export interface ProductSpecValue {
   value: string;
   priceAdjustment: number;
   sortOrder: number;
+  /** کد رنگ اختیاری مثل #1e3a8a برای سواچ */
+  colorHex?: string | null;
 }
 
 export interface ProductSpec {
@@ -522,6 +523,21 @@ export interface TopProduct {
   productName: string;
   quantitySold: number;
   revenue: number;
+  views?: number;
+  likes?: number;
+}
+
+export interface DashboardDayPoint {
+  date: string;
+  sales: number;
+  orders: number;
+  views: number;
+  newUsers: number;
+}
+
+export interface OrderStatusCount {
+  status: string;
+  count: number;
 }
 
 export interface DashboardReport {
@@ -529,12 +545,29 @@ export interface DashboardReport {
   orderCount: number;
   totalSales: number;
   todaySales: number;
+  yesterdaySales: number;
+  weekSales: number;
   monthSales: number;
+  averageOrderValue: number;
+  todayOrders: number;
   pendingOrders: number;
   completedOrders: number;
+  cancelledOrders: number;
+  returnedOrders: number;
   productCount: number;
+  lowStockProducts: number;
   openTickets: number;
+  todayViews: number;
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+  newUsersToday: number;
+  newUsersMonth: number;
+  conversionRatePercent: number;
+  last30Days: DashboardDayPoint[];
+  ordersByStatus: OrderStatusCount[];
   topProducts: TopProduct[];
+  topViewedProducts: TopProduct[];
 }
 
 export interface ProductReportDay {
@@ -650,8 +683,11 @@ export interface ShopSettings {
   description?: string | null;
   metaDescription?: string | null;
   primaryColor?: string | null;
+  industryKey?: string | null;
   heroBanners?: HeroBanner[];
   homeStories?: HomeStory[];
+  smsOtpEnabled?: boolean;
+  smsOrderEnabled?: boolean;
 }
 
 export interface UpdateShopSettingsRequest {
@@ -666,6 +702,9 @@ export interface UpdateShopSettingsRequest {
   description?: string | null;
   metaDescription?: string | null;
   primaryColor?: string | null;
+  industryKey?: string | null;
+  smsOtpEnabled?: boolean;
+  smsOrderEnabled?: boolean;
 }
 
 export interface UploadFileResult {
@@ -673,31 +712,4 @@ export interface UploadFileResult {
   fileName: string;
   contentType: string;
   size: number;
-}
-
-export interface TenantDto {
-  id: string;
-  slug: string;
-  name: string;
-  customDomain: string | null;
-  isActive: boolean;
-  createdAtUtc: string;
-}
-
-export interface CreateTenantRequest {
-  slug: string;
-  name: string;
-  adminEmail: string;
-  adminPassword: string;
-  adminFirstName: string;
-  adminLastName: string;
-  shopTitle?: string | null;
-  primaryColor?: string | null;
-}
-
-export interface CreateTenantResult {
-  tenantId: string;
-  slug: string;
-  name: string;
-  adminEmail: string;
 }

@@ -10,7 +10,6 @@ import { ApolloShopLogo } from "@/features/auth/ApolloShopLogo";
 import { OtpInput } from "@/features/auth/OtpInput";
 import {
   formatIdentifierInput,
-  formatOtpDisplay,
   formatPhoneDisplay,
   formatTimer,
   isCompleteIranianMobileInput,
@@ -19,6 +18,7 @@ import {
 } from "@/features/auth/normalize-phone";
 import { api, getApiErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { useShopSettings } from "@/lib/shop-settings-api";
 import { cn } from "@/lib/utils";
 import type { AuthResponse, SendOtpResponse, UserInfo } from "@/types/api";
 
@@ -42,6 +42,8 @@ export function DigikalaAuthFlow() {
   const router = useRouter();
   const search = useSearchParams();
   const setSession = useAuthStore((s) => s.setSession);
+  const { data: shop } = useShopSettings();
+  const shopTitle = shop?.shopTitle?.trim() || "فروشگاه";
 
   const [step, setStep] = useState<Step>("phone");
   const [identifierDisplay, setIdentifierDisplay] = useState("");
@@ -52,7 +54,6 @@ export function DigikalaAuthFlow() {
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [devCode, setDevCode] = useState<string | null>(null);
   const [resendSeconds, setResendSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -74,13 +75,8 @@ export function DigikalaAuthFlow() {
     const { data } = await api.post<SendOtpResponse>("/api/auth/otp/send", {
       phoneNumber: normalizedPhone,
     });
-    setDevCode(data.devCode ?? null);
     setResendSeconds(data.expiresInSeconds > 0 ? data.expiresInSeconds : DEFAULT_OTP_TTL);
-    if (data.devCode) {
-      setCode(formatOtpDisplay(data.devCode));
-    } else {
-      setCode("");
-    }
+    setCode("");
   }
 
   async function handleIdentifierSubmit(e: FormEvent) {
@@ -186,7 +182,6 @@ export function DigikalaAuthFlow() {
       setStep("phone");
       setCode("");
       setPassword("");
-      setDevCode(null);
       setResendSeconds(0);
     }
   }
@@ -194,12 +189,12 @@ export function DigikalaAuthFlow() {
   const identifierFloating = identifierFocused || identifierDisplay.length > 0;
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center bg-background px-4 py-10">
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-background px-3 py-8 pb-[max(2rem,env(safe-area-inset-bottom,0px))] sm:px-4 sm:py-10">
       <div className="absolute start-4 top-4 z-20 sm:start-6 sm:top-6">
         <ThemeToggle />
       </div>
 
-      <div className="w-full max-w-[400px] rounded-xl border border-border bg-card px-6 py-8 text-card-foreground sm:px-8">
+      <div className="w-full max-w-full rounded-xl border border-border bg-card px-4 py-7 text-card-foreground sm:max-w-[400px] sm:px-8 sm:py-8">
         <div className="relative mb-8 flex min-h-10 items-center justify-center">
           {step === "phone" ? (
             <Link
@@ -282,13 +277,18 @@ export function DigikalaAuthFlow() {
               className="flex w-full items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
               style={{ height: FIELD_H, minHeight: FIELD_H, maxHeight: FIELD_H, boxSizing: "border-box" }}
             >
-              {loading ? "لطفا صبر کنید..." : "ورود به فروشگاه آپولو"}
+              <span className="truncate px-2">
+                {loading ? "لطفا صبر کنید..." : `ورود به ${shopTitle}`}
+              </span>
             </button>
 
             <p className="text-center text-[11px] leading-6 text-muted-foreground">
               ورود شما به معنای پذیرش{" "}
               <a href="#" className="text-primary hover:opacity-80" onClick={(e) => e.preventDefault()}>
-                شرایط فروشگاه آپولو
+                شرایط{" "}
+                <span className="inline-block max-w-[12rem] truncate align-bottom sm:max-w-none">
+                  {shopTitle}
+                </span>
               </a>{" "}
               و{" "}
               <a href="#" className="text-primary hover:opacity-80" onClick={(e) => e.preventDefault()}>
@@ -321,8 +321,6 @@ export function DigikalaAuthFlow() {
                 void verifyOtp(otp);
               }}
             />
-
-            {devCode && <p className="text-center text-xs text-muted-foreground">کد توسعه: {devCode}</p>}
 
             <div className="flex flex-col items-start gap-3">
               <button

@@ -19,6 +19,8 @@ public record InternalSsoExchangeRequest(string Code);
 
 public record CreateTenantResultDto(Guid TenantId, string Slug, string Name, string AdminEmail);
 
+public record SetTenantActiveRequest(bool IsActive);
+
 public record TenantDto(
     Guid Id,
     string Slug,

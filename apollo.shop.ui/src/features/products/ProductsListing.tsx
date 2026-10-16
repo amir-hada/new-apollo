@@ -28,6 +28,15 @@ const SORT_OPTIONS = [
   { value: "featured", label: "منتخب" },
 ] as const;
 
+type SortValue = (typeof SORT_OPTIONS)[number]["value"];
+
+function parseSortParam(raw: string | null): SortValue {
+  const value = (raw ?? "relevant").trim().toLowerCase();
+  return SORT_OPTIONS.some((o) => o.value === value)
+    ? (value as SortValue)
+    : "relevant";
+}
+
 function flatCategories(nodes: CategoryTree[] = [], acc: CategoryTree[] = []) {
   for (const n of nodes) {
     acc.push(n);
@@ -203,6 +212,7 @@ function ProductsListingContent({
   const urlSearch = searchParams.get("search") ?? "";
   const urlCategory = routeCategorySlug ?? searchParams.get("category") ?? "";
   const urlBrand = searchParams.get("brand") ?? "";
+  const sort = parseSortParam(searchParams.get("sort"));
   const shopSettings = useShopSettings();
 
   const [page, setPage] = useState(1);
@@ -212,7 +222,6 @@ function ProductsListingContent({
   const [brandSlug, setBrandSlug] = useState(urlBrand);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [sort, setSort] = useState("relevant");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
@@ -221,7 +230,33 @@ function ProductsListingContent({
     setCategorySlug(urlCategory);
     setBrandSlug(urlBrand);
     setPage(1);
-  }, [urlSearch, urlCategory, urlBrand]);
+  }, [urlSearch, urlCategory, urlBrand, sort]);
+
+  const listingPath = routeCategorySlug
+    ? `/categories/${routeCategorySlug}`
+    : "/products";
+
+  const replaceListingParams = (
+    mutate: (params: URLSearchParams) => void,
+  ) => {
+    const params = new URLSearchParams(searchParams.toString());
+    // دسته از مسیر خوانده می‌شود، نه query
+    if (routeCategorySlug !== undefined) {
+      params.delete("category");
+    }
+    mutate(params);
+    const qs = params.toString();
+    router.replace(qs ? `${listingPath}?${qs}` : listingPath, { scroll: false });
+  };
+
+  const changeSort = (value: string) => {
+    const next = parseSortParam(value);
+    replaceListingParams((params) => {
+      if (next === "relevant") params.delete("sort");
+      else params.set("sort", next);
+    });
+    setPage(1);
+  };
 
   const queryKey = useMemo(
     () => ["products", page, q, categorySlug, brandSlug, minPrice, maxPrice, sort],
@@ -273,12 +308,17 @@ function ProductsListingContent({
   const changeCategory = (slug: string) => {
     setPage(1);
     if (routeCategorySlug !== undefined) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("category");
+      if (sort === "relevant") params.delete("sort");
+      else params.set("sort", sort);
+      const qs = params.toString();
       if (!slug) {
-        router.push("/products");
+        router.push(qs ? `/products?${qs}` : "/products");
         return;
       }
       if (slug !== routeCategorySlug) {
-        router.push(`/categories/${slug}`);
+        router.push(qs ? `/categories/${slug}?${qs}` : `/categories/${slug}`);
         return;
       }
     }
@@ -290,9 +330,18 @@ function ProductsListingContent({
     setQ("");
     setMinPrice("");
     setMaxPrice("");
-    setSort("relevant");
     setPage(1);
     setBrandSlug("");
+    replaceListingParams((params) => {
+      params.delete("search");
+      params.delete("brand");
+      params.delete("sort");
+      params.delete("minPrice");
+      params.delete("maxPrice");
+      if (routeCategorySlug === undefined) {
+        params.delete("category");
+      }
+    });
     if (routeCategorySlug !== undefined) {
       setCategorySlug(routeCategorySlug);
       return;
@@ -314,7 +363,7 @@ function ProductsListingContent({
 
   return (
     <div className="min-h-[70vh] bg-background">
-      <div className="w-full px-[5px] pt-3 sm:pt-4 lg:pt-3">
+      <div className="w-full px-3 pt-3 sm:px-4 sm:pt-4 lg:pt-3">
         <DigikalaBreadcrumb shopLabel={shopLabel} current={pageTitle} />
         <h1 className="sr-only">{pageTitle}</h1>
 
@@ -365,8 +414,33 @@ function ProductsListingContent({
           </aside>
 
           <div className="min-w-0 lg:col-span-6">
-            <div className="flex items-stretch gap-2 border-b border-[#e0e0e2] bg-background ps-3 pe-2 dark:border-white/10 sm:gap-3 sm:ps-4">
-              <div className="flex min-w-0 flex-1 items-stretch gap-3 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4">
+            <div className="flex items-stretch gap-2 border-b border-[#e0e0e2] bg-background ps-0 pe-2 dark:border-white/10 sm:gap-3 sm:ps-1">
+              {/* موبایل: دراپ‌داون مرتب‌سازی */}
+              <div className="flex min-w-0 flex-1 items-center gap-2 py-2.5 md:hidden">
+                <ArrowDownWideNarrow
+                  className="size-[18px] shrink-0 text-[#9e9fb1] dark:text-muted-foreground"
+                  strokeWidth={2}
+                  aria-hidden
+                />
+                <label className="sr-only" htmlFor="product-sort">
+                  مرتب‌سازی
+                </label>
+                <select
+                  id="product-sort"
+                  value={sort}
+                  onChange={(e) => changeSort(e.target.value)}
+                  className="h-10 min-w-0 flex-1 rounded-md border border-[#e0e0e2] bg-background px-2.5 text-[13px] text-[#3f4064] outline-none focus:border-foreground dark:border-white/10 dark:text-foreground"
+                >
+                  {SORT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* تبلت/دسکتاپ: چیپ‌های مرتب‌سازی */}
+              <div className="hidden min-w-0 flex-1 items-stretch gap-3 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex md:gap-4">
                 <span className="inline-flex shrink-0 items-center gap-2 py-3 text-[13px] font-bold text-[#3f4064] dark:text-foreground">
                   <ArrowDownWideNarrow
                     className="size-[18px] shrink-0 text-[#9e9fb1] dark:text-muted-foreground"
@@ -384,10 +458,7 @@ function ProductsListingContent({
                       <button
                         key={opt.value}
                         type="button"
-                        onClick={() => {
-                          setSort(opt.value);
-                          setPage(1);
-                        }}
+                        onClick={() => changeSort(opt.value)}
                         className={cn(
                           "relative shrink-0 py-3 text-[13px] transition-colors",
                           active
@@ -550,7 +621,7 @@ function ProductsListingContent({
 function ListingFallback() {
   return (
     <div className="min-h-[70vh] bg-background">
-      <div className="w-full space-y-4 px-[5px] py-6">
+      <div className="w-full space-y-4 px-3 py-6 sm:px-4">
         <Skeleton className="h-4 w-56" />
         <Skeleton className="h-10 w-full" />
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">

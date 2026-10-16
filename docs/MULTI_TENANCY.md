@@ -12,30 +12,21 @@
 | **هدر `X-Tenant-Slug`** | فرانت این هدر را به API می‌فرستد تا بداند دادهٔ کدام فروشگاه را بخواهد |
 
 فروشگاه پیش‌فرض seed شده: **`apollo`**  
-ادمین پیش‌فرض: `admin@apolloshop.ir` / `Admin@12345` (نقش‌های `Admin` و `PlatformAdmin`)
+ادمین پیش‌فرض: `admin@apolloshop.ir` / `Admin@12345`
 
----
-
-## ساخت فروشگاه جدید (UI)
-
-1. با ادمین وارد پنل شوید: `/admin`
-2. از منو بروید به **فروشگاه‌های جدید** (`/admin/tenants`)
-3. فرم را پر کنید:
-   - اسلاگ ساب‌دامین (فقط `a-z`، `0-9`، `-`)
-   - نام فروشگاه
-   - ایمیل و رمز ادمین همان فروشگاه
-4. بعد از ساخت، لینک فروشگاه نمایش داده می‌شود؛ با همان ایمیل/رمز روی آن ساب‌دامین لاگین کنید.
+ساخت فروشگاه جدید از پنل ادمین فروشگاه **غیرفعال** است؛ فقط از سایت‌ساز آپولو (`apollo.ui` → پلتفرم‌ها) انجام می‌شود. جزئیات در `docs/SITE_BUILDER.md`.
 
 هر فروشگاه جدید با تنظیمات خالی، دسته‌بندی تیکت پیش‌فرض و یک کاربر Admin ساخته می‌شود — محصولات فروشگاه‌های دیگر کپی نمی‌شوند.
 
 ---
 
-## ساخت از API
+## ساخت از API (فقط پلتفرم آپولو)
+
+Provisioning فقط از طریق endpoint داخلی با کلید مشترک (`X-Provisioning-Key`) و از سمت `apollo.api` انجام می‌شود:
 
 ```http
-POST /api/platform/tenants
-Authorization: Bearer <token-admin-یا-platformadmin>
-X-Tenant-Slug: apollo
+POST /api/internal/tenants
+X-Provisioning-Key: <Provisioning:ApiKey>
 Content-Type: application/json
 
 {
@@ -48,14 +39,6 @@ Content-Type: application/json
   "shopTitle": "فروشگاه ۲",
   "primaryColor": "#0f172a"
 }
-```
-
-لیست همهٔ tenantها (فقط `PlatformAdmin`):
-
-```http
-GET /api/platform/tenants
-Authorization: Bearer ...
-X-Tenant-Slug: apollo
 ```
 
 ---
@@ -121,6 +104,6 @@ CORS برای `localhost` / `*.localhost` و originهای تنظیم‌شده ب
 ## مسیرهای کد مهم
 
 - API middleware: `TenantResolutionMiddleware`, `TenantClaimValidationMiddleware`
-- ساخت tenant: `POST api/platform/tenants` → `CreateTenantCommand`
-- فرانت: `src/lib/tenant.ts`, هدر در `api.ts` / `server-api.ts`
-- UI ساخت: `/admin/tenants`
+- ساخت tenant: فقط `POST api/internal/tenants` (از `apollo.api`) → `CreateTenantCommand`
+- فرانت فروشگاه: `src/lib/tenant.ts`, هدر در `api.ts` / `server-api.ts`
+- UI ساخت فروشگاه: فقط داشبورد آپولو (`apollo.ui` → پلتفرم‌ها)، نه پنل `/admin` فروشگاه

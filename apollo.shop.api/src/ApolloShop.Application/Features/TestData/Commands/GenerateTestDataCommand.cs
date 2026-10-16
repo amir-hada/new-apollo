@@ -1,4 +1,5 @@
 using ApolloShop.Application.Abstractions;
+using ApolloShop.Application.Features.ShopSettings;
 using ApolloShop.Domain.Entities.Catalog;
 using ApolloShop.Domain.Entities.Content;
 using ApolloShop.Domain.Enums;
@@ -36,11 +37,16 @@ public sealed class GenerateTestDataCommandHandler : IRequestHandler<GenerateTes
     private static readonly Guid AdminUserId = Guid.Parse("33333333-3333-3333-3333-333333333333");
     private readonly IApplicationDbContext _db;
     private readonly IDateTimeProvider _clock;
+    private readonly ITenantContext _tenant;
 
-    public GenerateTestDataCommandHandler(IApplicationDbContext db, IDateTimeProvider clock)
+    public GenerateTestDataCommandHandler(
+        IApplicationDbContext db,
+        IDateTimeProvider clock,
+        ITenantContext tenant)
     {
         _db = db;
         _clock = clock;
+        _tenant = tenant;
     }
 
     public async Task<TestDataGenerateResult> Handle(
@@ -77,18 +83,29 @@ public sealed class GenerateTestDataCommandHandler : IRequestHandler<GenerateTes
         }).ToList();
         _db.Brands.AddRange(brands);
 
-        var categories = topic.Categories.Select((name, index) => new Category
+        // Full industry template (includes «سایر»); seed products only into core cats.
+        var industryTemplates = ShopIndustryCatalog.GetCategories(topic.Key);
+        var categories = industryTemplates.Select((template, index) => new Category
         {
             Id = Guid.NewGuid(),
-            Name = name,
-            Slug = $"{prefix}-cat-{index + 1}",
-            Description = $"دسته‌بندی تستی {name}",
+            Name = template.Name,
+            Slug = ShopIndustryCatalog.BuildSlug(topic.Key, template.Suffix),
+            Description = template.Description ?? $"دسته‌بندی {template.Name}",
             SortOrder = index + 1,
             IsActive = true,
             CreatedAtUtc = now,
-            CreatedBy = marker
+            CreatedBy = marker,
+            TenantId = _tenant.TenantId,
         }).ToList();
         _db.Categories.AddRange(categories);
+
+        var productCategories = categories
+            .Where(c => !c.Slug.EndsWith($"-{ShopIndustryCatalog.OtherSuffix}", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (productCategories.Count == 0)
+        {
+            productCategories = categories;
+        }
 
         var authorId = await ResolveAuthorIdAsync(cancellationToken);
 
@@ -144,7 +161,7 @@ public sealed class GenerateTestDataCommandHandler : IRequestHandler<GenerateTes
         for (var i = 0; i < topic.Products.Count; i++)
         {
             var name = topic.Products[i];
-            var category = categories[i % categories.Count];
+            var category = productCategories[i % productCategories.Count];
             var brand = brands[i % brands.Count];
             var image = topic.ProductImages[i % topic.ProductImages.Count];
             var basePrice = 250_000m + (i * 175_000m);
@@ -214,6 +231,20 @@ public sealed class GenerateTestDataCommandHandler : IRequestHandler<GenerateTes
         }
 
         _db.Products.AddRange(products);
+
+        var settings = await _db.ShopSettings.FirstOrDefaultAsync(cancellationToken);
+        if (settings is not null)
+        {
+            settings.IndustryKey = topic.Key;
+        }
+
+        await ShopIndustryCategorySync.ApplyAsync(
+            _db,
+            _tenant.TenantId,
+            topic.Key,
+            deactivateOthers: true,
+            cancellationToken);
+
         await _db.SaveChangesAsync(cancellationToken);
 
         return new TestDataGenerateResult(

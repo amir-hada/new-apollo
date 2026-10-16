@@ -23,9 +23,21 @@ public class ShopSettings : AuditableEntity, ITenantScoped
     /// <summary>Hex primary brand color, e.g. #0f172a.</summary>
     public string? PrimaryColor { get; set; }
 
+    /// <summary>
+    /// Store vertical key used for storefront presets (header links, return policy, etc.).
+    /// Matches test-data topic keys: clothing, mobile, cosmetics, home, …
+    /// </summary>
+    public string? IndustryKey { get; set; }
+
     /// <summary>JSON array of hero banner slides for the storefront homepage.</summary>
     public string? HeroBannersJson { get; set; }
 
     /// <summary>JSON array of homepage story circles.</summary>
     public string? HomeStoriesJson { get; set; }
+
+    /// <summary>When true, login/register OTP SMS is sent via the shared Apollo SMS panel.</summary>
+    public bool SmsOtpEnabled { get; set; } = true;
+
+    /// <summary>When true, an SMS is sent to the customer after placing an order.</summary>
+    public bool SmsOrderEnabled { get; set; } = true;
 }

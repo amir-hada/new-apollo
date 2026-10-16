@@ -1,6 +1,8 @@
 using ApolloShop.Application.Features.Account.Commands;
 using ApolloShop.Application.Features.Account.DTOs;
 using ApolloShop.Application.Features.Account.Queries;
+using ApolloShop.Application.Features.ShopSettings.Commands;
+using ApolloShop.Application.Features.ShopSettings.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,13 +23,53 @@ public class AccountController : ControllerBase
         Ok(await _mediator.Send(new GetProfileQuery(), cancellationToken));
 
     [HttpPut("profile")]
-    public async Task<ActionResult<ProfileDto>> UpdateProfile([FromBody] UpdateProfileRequest request, CancellationToken cancellationToken) =>
+    public async Task<ActionResult<ProfileDto>> UpdateProfile(
+        [FromBody] UpdateProfileRequest request,
+        CancellationToken cancellationToken) =>
         Ok(await _mediator.Send(new UpdateProfileCommand(request), cancellationToken));
 
-    [HttpPost("change-password")]
-    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken cancellationToken)
+    [HttpPost("avatar")]
+    [RequestSizeLimit(2 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 2 * 1024 * 1024)]
+    public async Task<ActionResult<ProfileDto>> UploadAvatar(
+        IFormFile? file,
+        CancellationToken cancellationToken = default)
     {
-        await _mediator.Send(new ChangePasswordCommand(request.CurrentPassword, request.NewPassword), cancellationToken);
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new { detail = "فایل انتخاب نشده است." });
+        }
+
+        await using var stream = file.OpenReadStream();
+        var uploaded = await _mediator.Send(
+            new UploadShopAssetCommand(
+                stream,
+                file.FileName,
+                file.ContentType,
+                "avatar",
+                file.Length),
+            cancellationToken);
+
+        var current = await _mediator.Send(new GetProfileQuery(), cancellationToken);
+        var profile = await _mediator.Send(
+            new UpdateProfileCommand(new UpdateProfileRequest(
+                current.FirstName,
+                current.LastName,
+                current.PhoneNumber,
+                uploaded.Url)),
+            cancellationToken);
+
+        return Ok(profile);
+    }
+
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(
+            new ChangePasswordCommand(request.CurrentPassword, request.NewPassword),
+            cancellationToken);
         return NoContent();
     }
 }

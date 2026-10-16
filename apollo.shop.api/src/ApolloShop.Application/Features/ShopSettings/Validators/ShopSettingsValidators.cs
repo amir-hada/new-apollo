@@ -1,3 +1,4 @@
+using ApolloShop.Application.Features.ShopSettings;
 using ApolloShop.Application.Features.ShopSettings.Commands;
 using FluentValidation;
 
@@ -25,5 +26,10 @@ public class UpdateShopSettingsCommandValidator : AbstractValidator<UpdateShopSe
             .MaximumLength(20)
             .Matches("^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$")
             .When(x => !string.IsNullOrWhiteSpace(x.Request.PrimaryColor));
+        RuleFor(x => x.Request.IndustryKey)
+            .MaximumLength(50)
+            .Must(k => string.IsNullOrWhiteSpace(k) || ShopIndustryKeys.All.Contains(k.Trim()))
+            .WithMessage("نوع فروشگاه معتبر نیست.")
+            .When(x => !string.IsNullOrWhiteSpace(x.Request.IndustryKey));
     }
 }

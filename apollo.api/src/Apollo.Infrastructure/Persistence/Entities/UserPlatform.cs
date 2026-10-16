@@ -27,6 +27,9 @@ public sealed class UserPlatform
 
     public string? ProvisioningError { get; set; }
 
+    /// <summary>Whether the shop tenant is active (synced with shop <c>Tenant.IsActive</c>).</summary>
+    public bool IsActive { get; set; } = true;
+
     public DateTime CreatedAtUtc { get; set; }
 
     public DateTime UpdatedAtUtc { get; set; }

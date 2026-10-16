@@ -80,6 +80,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<TicketMessage> TicketMessages => Set<TicketMessage>();
     public DbSet<TicketAttachment> TicketAttachments => Set<TicketAttachment>();
 
+    public DbSet<ChatConversation> ChatConversations => Set<ChatConversation>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.AddInterceptors(_auditableEntityInterceptor);
@@ -119,6 +122,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         ApplyTenantFilter<BlogTag>(modelBuilder);
         ApplyTenantFilter<TicketCategory>(modelBuilder);
         ApplyTenantFilter<Ticket>(modelBuilder);
+        ApplyTenantFilter<ChatConversation>(modelBuilder);
+        ApplyTenantFilter<ChatMessage>(modelBuilder);
 
         base.OnModelCreating(modelBuilder);
     }

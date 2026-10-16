@@ -30,10 +30,12 @@ export function AdminHeader({ className, fixed, children, ...props }: AdminHeade
       )}
       {...props}
     >
-      <div className="relative flex h-full items-center gap-3 bg-background p-4 sm:gap-4">
-        <SidebarTrigger variant="outline" className="max-md:scale-125" />
-        <Separator orientation="vertical" className="h-6" />
-        {children}
+      <div className="relative flex h-full min-w-0 items-center gap-3 bg-background p-4 sm:gap-4">
+        <SidebarTrigger variant="outline" className="max-md:scale-125 shrink-0" />
+        <Separator orientation="vertical" className="h-6 shrink-0" />
+        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
+          {children}
+        </div>
       </div>
     </header>
   );

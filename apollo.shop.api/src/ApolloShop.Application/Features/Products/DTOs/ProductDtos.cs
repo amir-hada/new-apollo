@@ -14,7 +14,8 @@ public record ProductSpecValueDto(
     Guid? Id,
     string Value,
     decimal PriceAdjustment,
-    int SortOrder);
+    int SortOrder,
+    string? ColorHex = null);
 
 public record ProductSpecDto(
     Guid? Id,
@@ -107,7 +108,8 @@ public record UpsertProductSpecValueRequest(
     Guid? Id,
     string Value,
     decimal PriceAdjustment,
-    int SortOrder);
+    int SortOrder,
+    string? ColorHex = null);
 
 public record UpsertProductSpecRequest(
     Guid? Id,

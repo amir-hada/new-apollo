@@ -88,6 +88,7 @@ internal static class ProductWriteHelper
                     Id = Guid.NewGuid(),
                     SpecificationId = entity.Id,
                     Value = value.Value.Trim(),
+                    ColorHex = NormalizeColorHex(value.ColorHex),
                     PriceAdjustment = isOrderParameter ? value.PriceAdjustment : 0,
                     SortOrder = valueSort
                 });
@@ -193,5 +194,20 @@ internal static class ProductWriteHelper
         }
 
         return (max + 1).ToString("D4");
+    }
+
+    public static string? NormalizeColorHex(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var hex = raw.Trim();
+        if (!hex.StartsWith('#')) hex = "#" + hex;
+        if (hex.Length is not (4 or 7)) return null;
+        for (var i = 1; i < hex.Length; i++)
+        {
+            var c = hex[i];
+            var ok = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+            if (!ok) return null;
+        }
+        return hex.ToLowerInvariant();
     }
 }

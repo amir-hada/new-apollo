@@ -1,0 +1,36 @@
+using ApolloShop.Application.Abstractions;
+using ApolloShop.Application.Features.ShopSettings.DTOs;
+using ApolloShop.Application.Features.ShopSettings.Queries;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+
+namespace ApolloShop.Application.Features.ShopSettings.Commands;
+
+public record UpdateShopSmsSettingsCommand(UpdateShopSmsSettingsRequest Request) : IRequest<ShopSettingsDto>;
+
+public class UpdateShopSmsSettingsCommandHandler : IRequestHandler<UpdateShopSmsSettingsCommand, ShopSettingsDto>
+{
+    private readonly IApplicationDbContext _db;
+    private readonly ITenantContext _tenant;
+
+    public UpdateShopSmsSettingsCommandHandler(IApplicationDbContext db, ITenantContext tenant)
+    {
+        _db = db;
+        _tenant = tenant;
+    }
+
+    public async Task<ShopSettingsDto> Handle(UpdateShopSmsSettingsCommand request, CancellationToken cancellationToken)
+    {
+        var settings = await _db.ShopSettings.FirstOrDefaultAsync(cancellationToken);
+        if (settings is null)
+        {
+            settings = GetShopSettingsQueryHandler.CreateDefault(_tenant.TenantId);
+            _db.ShopSettings.Add(settings);
+        }
+
+        settings.SmsOtpEnabled = request.Request.SmsOtpEnabled;
+        settings.SmsOrderEnabled = request.Request.SmsOrderEnabled;
+        await _db.SaveChangesAsync(cancellationToken);
+        return GetShopSettingsQueryHandler.Map(settings);
+    }
+}

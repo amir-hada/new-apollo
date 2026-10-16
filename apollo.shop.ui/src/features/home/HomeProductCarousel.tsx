@@ -72,7 +72,7 @@ export function HomeProductCarousel({
           <div
             ref={scrollerRef}
             className={cn(
-              "flex w-full overflow-x-auto border-y border-[#e0e0e2] dark:border-white/10",
+              "flex w-full snap-x snap-mandatory overflow-x-auto border-y border-[#e0e0e2] dark:border-white/10",
               "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
             )}
           >
@@ -80,7 +80,7 @@ export function HomeProductCarousel({
               <div
                 key={product.id}
                 className={cn(
-                  "w-[46%] shrink-0 sm:w-[33.333%] md:w-[25%] lg:w-[16.666%] xl:w-[14.285%] 2xl:w-[12.5%]",
+                  "w-[46%] shrink-0 snap-start sm:w-[33.333%] md:w-[33.333%] lg:w-[16.666%] xl:w-[14.285%] 2xl:w-[12.5%]",
                   index === products.length - 1 && "[&>a]:border-e-0",
                 )}
               >

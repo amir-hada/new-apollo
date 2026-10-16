@@ -1,17 +1,14 @@
 /** Header sent to API so requests hit the correct shop (matches backend middleware). */
 export const TENANT_HEADER = "X-Tenant-Slug";
 
-/** Default shop slug when host has no subdomain (matches API Tenancy:DefaultSlug). */
-export const DEFAULT_TENANT_SLUG =
-  (process.env.NEXT_PUBLIC_TENANT_SLUG || "apollo").trim().toLowerCase();
-
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5080";
 
 const RESERVED = new Set(["www", "api", "localhost"]);
 
 /**
  * Resolve tenant slug from a hostname.
- * shop2.localhost → shop2; shop2.example.com → shop2; localhost → null.
+ * shop2.localhost → shop2; shop2.example.com → shop2; localhost / apex → null.
+ * Bare hosts are not shops — only shop subdomains are valid storefronts.
  */
 export function getTenantSlugFromHost(host: string | null | undefined): string | null {
   if (!host) return null;
@@ -28,10 +25,10 @@ export function getTenantSlugFromHost(host: string | null | undefined): string |
   return candidate;
 }
 
-/** Client-side current tenant slug. */
+/** Client-side current tenant slug (empty when host is not a shop subdomain). */
 export function getClientTenantSlug(): string {
-  if (typeof window === "undefined") return DEFAULT_TENANT_SLUG;
-  return getTenantSlugFromHost(window.location.host) ?? DEFAULT_TENANT_SLUG;
+  if (typeof window === "undefined") return "";
+  return getTenantSlugFromHost(window.location.host) ?? "";
 }
 
 /** Absolute storefront URL for a tenant slug (local subdomain or env base). */

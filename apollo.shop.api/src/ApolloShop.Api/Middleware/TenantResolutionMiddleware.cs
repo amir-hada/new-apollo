@@ -13,12 +13,10 @@ public partial class TenantResolutionMiddleware
     private static readonly string[] ReservedSubdomains = ["www", "api", "localhost"];
 
     private readonly RequestDelegate _next;
-    private readonly string _defaultSlug;
 
-    public TenantResolutionMiddleware(RequestDelegate next, IConfiguration configuration)
+    public TenantResolutionMiddleware(RequestDelegate next)
     {
         _next = next;
-        _defaultSlug = (configuration["Tenancy:DefaultSlug"] ?? "apollo").Trim().ToLowerInvariant();
     }
 
     public async Task InvokeAsync(HttpContext context, ITenantContext tenantContext, IApplicationDbContext db)
@@ -53,11 +51,17 @@ public partial class TenantResolutionMiddleware
     {
         var cancellationToken = context.RequestAborted;
         var header = context.Request.Headers[HeaderName].ToString().Trim().ToLowerInvariant();
+        // SignalR negotiate/WebSocket cannot always send custom headers; allow query fallback.
+        var queryTenant = context.Request.Query["tenant"].ToString().Trim().ToLowerInvariant();
 
         string slug;
         if (!string.IsNullOrEmpty(header))
         {
             slug = header;
+        }
+        else if (!string.IsNullOrEmpty(queryTenant))
+        {
+            slug = queryTenant;
         }
         else
         {
@@ -68,7 +72,9 @@ public partial class TenantResolutionMiddleware
                 return byDomain;
             }
 
-            slug = GetSubdomain(host) ?? _defaultSlug;
+            // Bare hosts (localhost / apex) are not shops — only subdomains or custom domains.
+            slug = GetSubdomain(host)
+                ?? throw new NotFoundException("Tenant", string.IsNullOrWhiteSpace(host) ? "unknown" : host);
         }
 
         if (!SlugPattern().IsMatch(slug))

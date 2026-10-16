@@ -3,6 +3,8 @@ import { ExternalLinkIcon, GlobeIcon, Loader2Icon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { SitesRowActions } from "@/features/dashboard/components/sites-row-actions"
+import { useAdminSiteActions } from "@/features/dashboard/hooks/use-admin-site-actions"
 import { useAuth } from "@/features/auth/context/auth-provider"
 import { adminApi } from "@/lib/api/admin-api"
 import { ApiError } from "@/lib/api/client"
@@ -60,6 +62,22 @@ function StatusBadge({ status }: { status: SiteProvisioningStatus }) {
   )
 }
 
+function ActiveBadge({ isActive }: { isActive: boolean }) {
+  return (
+    <Badge
+      variant="secondary"
+      className={cn(
+        "rounded-md border px-2 py-0.5 text-[10px] font-light",
+        isActive
+          ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
+          : "border-amber-400/25 bg-amber-400/10 text-amber-300"
+      )}
+    >
+      {isActive ? "فعال" : "معلق"}
+    </Badge>
+  )
+}
+
 function SiteLink({ href, label }: { href: string | null; label: string }) {
   if (!href) {
     return <span className="text-xs font-light text-muted-foreground">—</span>
@@ -83,6 +101,16 @@ export function SitesPage() {
   const [sites, setSites] = React.useState<AdminSiteListItem[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
+  const [reloadKey, setReloadKey] = React.useState(0)
+
+  const {
+    requestActivate,
+    requestDeactivate,
+    requestDelete,
+    confirmDialog,
+  } = useAdminSiteActions({
+    onSuccess: () => setReloadKey((value) => value + 1),
+  })
 
   React.useEffect(() => {
     let cancelled = false
@@ -113,10 +141,11 @@ export function SitesPage() {
     return () => {
       cancelled = true
     }
-  }, [logout])
+  }, [logout, reloadKey])
 
   const headClass =
     "px-4 py-3 text-center text-xs font-light text-muted-foreground"
+  const columnCount = 10
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -129,24 +158,26 @@ export function SitesPage() {
         ) : null}
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1000px] border-collapse">
+          <table className="w-full min-w-[1180px] border-collapse">
             <thead>
               <tr className="border-b border-white/8 bg-white/[0.02]">
                 <th className={headClass}>کاربر</th>
                 <th className={headClass}>پلن</th>
                 <th className={headClass}>نام سایت</th>
                 <th className={headClass}>اسلاگ</th>
+                <th className={headClass}>آماده‌سازی</th>
                 <th className={headClass}>وضعیت</th>
                 <th className={headClass}>فروشگاه</th>
                 <th className={headClass}>پنل مدیریت</th>
                 <th className={headClass}>تاریخ ایجاد</th>
+                <th className={headClass}>عملیات</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, index) => (
                   <tr key={index} className="border-b border-white/6">
-                    {Array.from({ length: 8 }).map((__, cell) => (
+                    {Array.from({ length: columnCount }).map((__, cell) => (
                       <td key={cell} className="px-4 py-3 text-center">
                         <Skeleton className="mx-auto h-3 w-24" />
                       </td>
@@ -155,7 +186,10 @@ export function SitesPage() {
                 ))
               ) : error ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center">
+                  <td
+                    colSpan={columnCount}
+                    className="px-4 py-16 text-center"
+                  >
                     <p
                       className="text-sm font-light text-destructive"
                       role="alert"
@@ -166,7 +200,10 @@ export function SitesPage() {
                 </tr>
               ) : sites.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center">
+                  <td
+                    colSpan={columnCount}
+                    className="px-4 py-16 text-center"
+                  >
                     <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
                       <span className="flex size-12 items-center justify-center rounded-full border border-white/10 bg-background/70 text-muted-foreground">
                         <GlobeIcon className="size-5" />
@@ -229,6 +266,9 @@ export function SitesPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-center">
+                      <ActiveBadge isActive={site.isActive !== false} />
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
                       <SiteLink href={site.storefrontUrl} label="مشاهده" />
                     </td>
                     <td className="px-4 py-3.5 text-center">
@@ -237,6 +277,14 @@ export function SitesPage() {
                     <td className="px-4 py-3.5 text-center text-xs font-light tabular-nums text-muted-foreground">
                       {formatDate(site.createdAtUtc)}
                     </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <SitesRowActions
+                        site={site}
+                        onActivate={requestActivate}
+                        onDeactivate={requestDeactivate}
+                        onDelete={requestDelete}
+                      />
+                    </td>
                   </tr>
                 ))
               )}
@@ -244,6 +292,8 @@ export function SitesPage() {
           </table>
         </div>
       </div>
+
+      {confirmDialog}
     </div>
   )
 }

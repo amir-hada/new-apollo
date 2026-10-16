@@ -2,9 +2,9 @@ using System.Security.Cryptography;
 using ApolloShop.Application.Abstractions;
 using ApolloShop.Application.Features.Authentication.DTOs;
 using ApolloShop.Domain.Entities.Identity;
+using ApolloShop.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
 
 namespace ApolloShop.Application.Features.Authentication.Commands;
 
@@ -19,26 +19,29 @@ public class SendPhoneOtpCommandHandler : IRequestHandler<SendPhoneOtpCommand, S
     private readonly IPasswordHasher _passwordHasher;
     private readonly ISmsSender _smsSender;
     private readonly IDateTimeProvider _clock;
-    private readonly IHostEnvironment _environment;
 
     public SendPhoneOtpCommandHandler(
         IApplicationDbContext db,
         IPasswordHasher passwordHasher,
         ISmsSender smsSender,
-        IDateTimeProvider clock,
-        IHostEnvironment environment)
+        IDateTimeProvider clock)
     {
         _db = db;
         _passwordHasher = passwordHasher;
         _smsSender = smsSender;
         _clock = clock;
-        _environment = environment;
     }
 
     public async Task<SendOtpResponse> Handle(SendPhoneOtpCommand request, CancellationToken cancellationToken)
     {
         var phone = PhoneNormalization.NormalizeOrThrow(request.PhoneNumber);
         var now = _clock.UtcNow;
+
+        var settings = await _db.ShopSettings.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+        if (settings is not null && !settings.SmsOtpEnabled)
+        {
+            throw new ValidationException("Sms", "ارسال پیامک OTP در تنظیمات این فروشگاه غیرفعال است.");
+        }
 
         var previous = await _db.PhoneOtps
             .Where(o => o.PhoneNumber == phone && o.Purpose == "login" && o.ConsumedAtUtc == null)
@@ -64,9 +67,25 @@ public class SendPhoneOtpCommandHandler : IRequestHandler<SendPhoneOtpCommand, S
 
         await _db.SaveChangesAsync(cancellationToken);
 
-        await _smsSender.SendAsync(phone, $"کد ورود آپولوشاپ: {code}", cancellationToken);
+        try
+        {
+            await _smsSender.SendOtpAsync(phone, code, cancellationToken);
+        }
+        catch
+        {
+            var failed = await _db.PhoneOtps
+                .Where(o => o.PhoneNumber == phone && o.Purpose == "login" && o.ConsumedAtUtc == null)
+                .OrderByDescending(o => o.CreatedAtUtc)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (failed is not null)
+            {
+                failed.ConsumedAtUtc = _clock.UtcNow;
+                await _db.SaveChangesAsync(cancellationToken);
+            }
 
-        var devCode = _environment.IsDevelopment() ? code : null;
-        return new SendOtpResponse(phone, OtpTtlSeconds, devCode);
+            throw;
+        }
+
+        return new SendOtpResponse(phone, OtpTtlSeconds, DevCode: null);
     }
 }

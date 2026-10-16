@@ -1,18 +1,44 @@
+import { cache } from "react";
 import { headers } from "next/headers";
-import { API_URL, DEFAULT_TENANT_SLUG, TENANT_HEADER, getTenantSlugFromHost } from "@/lib/tenant";
+import { API_URL, TENANT_HEADER, getTenantSlugFromHost } from "@/lib/tenant";
 
 export { API_URL, TENANT_HEADER };
 
-/** Resolve tenant for the current SSR request. */
-export async function getServerTenantSlug(): Promise<string> {
+/** Resolve tenant slug from the request host (null on bare localhost / apex). */
+export async function getServerTenantSlug(): Promise<string | null> {
   try {
     const h = await headers();
     const host = h.get("x-forwarded-host") || h.get("host");
-    return getTenantSlugFromHost(host) ?? DEFAULT_TENANT_SLUG;
+    return getTenantSlugFromHost(host);
   } catch {
-    return DEFAULT_TENANT_SLUG;
+    return null;
   }
 }
+
+/**
+ * Confirms the current host is a shop subdomain of an active tenant.
+ * Bare hosts (e.g. http://localhost:3000) are never valid shops.
+ * Cached per request so layout + metadata share one probe.
+ */
+export const isActiveTenant = cache(async (): Promise<boolean> => {
+  try {
+    const slug = await getServerTenantSlug();
+    if (!slug) return false;
+
+    const res = await fetch(`${API_URL}/api/shop-settings`, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        [TENANT_HEADER]: slug,
+      },
+    });
+    return res.status !== 404;
+  } catch {
+    // Host already validated as a subdomain; keep page usable if API is briefly down.
+    return true;
+  }
+});
 
 /** Server-side fetch helper for SEO pages (sends tenant header). */
 export async function serverFetch<T>(
@@ -22,6 +48,8 @@ export async function serverFetch<T>(
   try {
     const { revalidate = 60, tenantSlug, ...rest } = init ?? {};
     const slug = tenantSlug ?? (await getServerTenantSlug());
+    if (!slug) return null;
+
     const res = await fetch(`${API_URL}${path}`, {
       ...rest,
       ...(revalidate === false

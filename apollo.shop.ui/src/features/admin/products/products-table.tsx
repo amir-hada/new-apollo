@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { flexRender } from "@tanstack/react-table";
 import {
   getCoreRowModel,
@@ -17,6 +17,7 @@ import type {
   PaginationState,
   SortingState,
 } from "@tanstack/table-core";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -54,6 +55,7 @@ export function ProductsTable({
     [data],
   );
 
+  const isMobile = useIsMobile();
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] =
     useState<ColumnVisibilityState>({ category: false });
@@ -63,6 +65,14 @@ export function ProductsTable({
     pageIndex: 0,
     pageSize: 15,
   });
+
+  useEffect(() => {
+    setColumnVisibility({
+      category: false,
+      totalSales: !isMobile,
+      totalRevenue: !isMobile,
+    });
+  }, [isMobile]);
 
   const table = useLegacyTable({
     data,

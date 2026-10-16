@@ -26,8 +26,11 @@ public record ShopSettingsDto(
     string? Description,
     string? MetaDescription,
     string? PrimaryColor,
+    string? IndustryKey,
     IReadOnlyList<HeroBannerDto> HeroBanners,
-    IReadOnlyList<HomeStoryDto> HomeStories);
+    IReadOnlyList<HomeStoryDto> HomeStories,
+    bool SmsOtpEnabled,
+    bool SmsOrderEnabled);
 
 public record UpdateShopSettingsRequest(
     string ShopTitle,
@@ -40,7 +43,12 @@ public record UpdateShopSettingsRequest(
     string? Address,
     string? Description,
     string? MetaDescription,
-    string? PrimaryColor);
+    string? PrimaryColor,
+    string? IndustryKey = null,
+    bool? SmsOtpEnabled = null,
+    bool? SmsOrderEnabled = null);
+
+public record UpdateShopSmsSettingsRequest(bool SmsOtpEnabled, bool SmsOrderEnabled);
 
 public record UpdateHeroBannersRequest(IReadOnlyList<HeroBannerDto> Banners);
 

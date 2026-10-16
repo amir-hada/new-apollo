@@ -146,7 +146,7 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
             if (string.IsNullOrWhiteSpace(name)) continue;
 
             var values = (spec.Values ?? [])
-                .Select(v => new { v.Value, v.PriceAdjustment, v.SortOrder })
+                .Select(v => new { v.Value, v.PriceAdjustment, v.SortOrder, v.ColorHex })
                 .Where(v => !string.IsNullOrWhiteSpace(v.Value))
                 .OrderBy(v => v.SortOrder)
                 .ToList();
@@ -172,6 +172,7 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
                     Id = Guid.NewGuid(),
                     SpecificationId = entity.Id,
                     Value = value.Value.Trim(),
+                    ColorHex = ProductWriteHelper.NormalizeColorHex(value.ColorHex),
                     PriceAdjustment = isOrderParameter ? value.PriceAdjustment : 0,
                     SortOrder = valueSort
                 };

@@ -13,6 +13,7 @@ import { CurrencySelect } from "@/features/admin/settings/currency-select";
 import { api, getApiErrorMessage } from "@/lib/api";
 import { DEFAULT_SHOP_PRIMARY } from "@/lib/shop-primary-color";
 import { setActiveShopCurrency } from "@/lib/shop-currency";
+import { SHOP_INDUSTRY_OPTIONS } from "@/lib/shop-industry-presets";
 import {
   SHOP_SETTINGS_QUERY_KEY,
   uploadShopAsset,
@@ -33,6 +34,7 @@ const emptyForm: FormState = {
   description: null,
   metaDescription: null,
   primaryColor: DEFAULT_SHOP_PRIMARY,
+  industryKey: "general",
 };
 
 const fieldClass = "h-9 px-3 text-sm md:text-sm";
@@ -63,6 +65,7 @@ export function StoreForm() {
       description: settings.data.description ?? null,
       metaDescription: settings.data.metaDescription ?? null,
       primaryColor: settings.data.primaryColor || DEFAULT_SHOP_PRIMARY,
+      industryKey: settings.data.industryKey || "general",
     });
   }, [settings.data]);
 
@@ -160,6 +163,26 @@ export function StoreForm() {
           />
           <p className="text-[11px] text-muted-foreground">
             قیمت‌ها همیشه به‌صورت تومان ذخیره می‌شوند؛ انتخاب ریال فقط نمایش را ×۱۰ می‌کند.
+          </p>
+        </Field>
+        <Field label="نوع فروشگاه" htmlFor="industryKey">
+          <select
+            id="industryKey"
+            className={`${fieldClass} w-full rounded-md border border-input bg-background`}
+            value={form.industryKey || "general"}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, industryKey: e.target.value || "general" }))
+            }
+          >
+            {SHOP_INDUSTRY_OPTIONS.map((opt) => (
+              <option key={opt.key} value={opt.key}>
+                {opt.title}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-muted-foreground">
+            با تغییر نوع فروشگاه، هدر و دسته‌های پیش‌فرض (به‌همراه «سایر») همگام
+            می‌شوند. دسته‌هایی که خودتان بسازید دست‌نخورده می‌مانند.
           </p>
         </Field>
         <Field label="تلفن پشتیبانی" htmlFor="supportPhone">

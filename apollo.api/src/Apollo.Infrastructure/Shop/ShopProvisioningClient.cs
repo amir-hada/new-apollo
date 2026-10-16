@@ -27,7 +27,8 @@ public sealed class ShopProvisioningClient : IShopProvisioningClient
         ShopCreateTenantRequest request,
         CancellationToken cancellationToken = default)
     {
-        var result = await PostAsync<ShopCreateTenantResult>(
+        var result = await SendAsync<ShopCreateTenantResult>(
+            HttpMethod.Post,
             "api/internal/tenants",
             request,
             cancellationToken);
@@ -40,12 +41,39 @@ public sealed class ShopProvisioningClient : IShopProvisioningClient
         string email,
         CancellationToken cancellationToken = default)
     {
-        var result = await PostAsync<ShopSsoCodeResult>(
+        var result = await SendAsync<ShopSsoCodeResult>(
+            HttpMethod.Post,
             $"api/internal/tenants/{Uri.EscapeDataString(slug)}/sso-code",
             new { email },
             cancellationToken);
 
         return result;
+    }
+
+    public async Task<ShopTenantStatusResult> SetTenantActiveAsync(
+        string slug,
+        bool isActive,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await SendAsync<ShopTenantStatusResult>(
+            HttpMethod.Patch,
+            $"api/internal/tenants/{Uri.EscapeDataString(slug)}/status",
+            new { isActive },
+            cancellationToken);
+
+        return result;
+    }
+
+    public async Task DeleteTenantAsync(
+        string slug,
+        CancellationToken cancellationToken = default)
+    {
+        await SendAsync<object?>(
+            HttpMethod.Delete,
+            $"api/internal/tenants/{Uri.EscapeDataString(slug)}",
+            body: null,
+            cancellationToken,
+            allowEmptyBody: true);
     }
 
     public string BuildStorefrontUrl(string slug)
@@ -64,17 +92,24 @@ public sealed class ShopProvisioningClient : IShopProvisioningClient
         return BuildStorefrontUrl(slug) + path;
     }
 
-    private async Task<T> PostAsync<T>(string path, object body, CancellationToken cancellationToken)
+    private async Task<T> SendAsync<T>(
+        HttpMethod method,
+        string path,
+        object? body,
+        CancellationToken cancellationToken,
+        bool allowEmptyBody = false)
     {
         if (string.IsNullOrWhiteSpace(_options.ProvisioningKey))
         {
             throw new ShopProvisioningException("کلید ارتباط با سرویس فروشگاه تنظیم نشده است.");
         }
 
-        using var message = new HttpRequestMessage(HttpMethod.Post, path)
+        using var message = new HttpRequestMessage(method, path);
+        if (body is not null)
         {
-            Content = JsonContent.Create(body, options: JsonOptions),
-        };
+            message.Content = JsonContent.Create(body, options: JsonOptions);
+        }
+
         message.Headers.Add(KeyHeader, _options.ProvisioningKey);
 
         HttpResponseMessage response;
@@ -96,6 +131,17 @@ public sealed class ShopProvisioningClient : IShopProvisioningClient
             if (!response.IsSuccessStatusCode)
             {
                 throw new ShopProvisioningException(await ReadErrorAsync(response, cancellationToken));
+            }
+
+            if (allowEmptyBody || response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                return default!;
+            }
+
+            var contentLength = response.Content.Headers.ContentLength;
+            if (contentLength is 0)
+            {
+                return default!;
             }
 
             try

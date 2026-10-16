@@ -16,6 +16,8 @@ import {
   normalizeShopCurrency,
   toDisplayAmount,
 } from "@/lib/shop-currency";
+import { getShopIndustryPreset } from "@/lib/shop-industry-presets";
+import { useShopSettings } from "@/lib/shop-settings-api";
 import { useShopCurrency } from "@/providers/ShopCurrencyProvider";
 import type { Cart } from "@/types/api";
 
@@ -31,6 +33,8 @@ export default function CartPage() {
   const setCart = useCartStore((s) => s.setCart);
   const queryClient = useQueryClient();
   const currency = useShopCurrency() || "تومان";
+  const { data: shopSettings } = useShopSettings();
+  const warranty = getShopIndustryPreset(shopSettings?.industryKey).warranty;
 
   const cartQuery = useQuery({
     queryKey: ["cart"],
@@ -101,7 +105,7 @@ export default function CartPage() {
 
   return (
     <div className="bg-[#f5f5f5] dark:bg-background">
-      <div className="mx-auto grid w-full max-w-[1100px] gap-4 px-3 py-6 sm:px-4 lg:grid-cols-[1fr_300px] lg:py-8">
+      <div className="mx-auto grid w-full max-w-[1100px] gap-4 px-3 py-6 sm:px-4 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_300px] lg:py-8">
         <section className="min-w-0 space-y-3">
           <div className="flex items-center justify-between gap-3 rounded-md border border-[#e0e0e2] bg-background px-4 py-3 dark:border-white/10">
             <h1 className="text-[16px] font-bold text-[#0c0c0c] dark:text-foreground">
@@ -121,7 +125,7 @@ export default function CartPage() {
               <div className="flex gap-3 sm:gap-4">
                 <Link
                   href={`/products/${item.productSlug}`}
-                  className="size-24 shrink-0 overflow-hidden rounded-md border border-[#f0f0f1] bg-background sm:size-28 dark:border-white/10"
+                  className="size-20 shrink-0 overflow-hidden rounded-md border border-[#f0f0f1] bg-background sm:size-28 dark:border-white/10"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -134,26 +138,24 @@ export default function CartPage() {
                 <div className="min-w-0 flex-1">
                   <Link
                     href={`/products/${item.productSlug}`}
-                    className="line-clamp-2 text-[13px] font-bold leading-6 text-[#0c0c0c] hover:text-primary dark:text-foreground"
+                    className="line-clamp-2 break-words text-[13px] font-bold leading-6 text-[#0c0c0c] hover:text-primary dark:text-foreground"
                   >
                     {item.productName}
                   </Link>
                   {(item.selectedOptions?.length ?? 0) > 0 ? (
-                    <p className="mt-1 text-[12px] text-[#81858b]">
+                    <p className="mt-1 line-clamp-2 break-words text-[12px] text-[#81858b]">
                       {item.selectedOptions
                         .map((o) => `${o.name}: ${o.value}`)
                         .join(" · ")}
                     </p>
                   ) : (
-                    <p className="mt-1 text-[12px] text-[#81858b]">
+                    <p className="mt-1 line-clamp-1 text-[12px] text-[#81858b]">
                       {item.variantName}
                     </p>
                   )}
-                  <p className="mt-2 text-[11px] text-[#a1a3a8]">
-                    گارانتی اصالت و سلامت فیزیکی کالا
-                  </p>
+                  <p className="mt-2 text-[11px] text-[#a1a3a8]">{warranty}</p>
 
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="mt-4 flex w-full flex-wrap items-center justify-between gap-3">
                     <div className="inline-flex h-10 items-center gap-0.5 rounded-md border border-[#e0e0e2] bg-background px-0.5 shadow-sm dark:border-white/10">
                       <button
                         type="button"
@@ -222,13 +224,13 @@ export default function CartPage() {
           ))}
         </section>
 
-        <aside className="h-fit lg:sticky lg:top-24">
+        <aside className="h-fit md:sticky md:top-24">
           <div className="rounded-md border border-[#e0e0e2] bg-background p-4 dark:border-white/10">
             <div className="mb-4 flex items-center justify-between gap-3 text-[13px]">
-              <span className="text-[#81858b]">
+              <span className="min-w-0 text-[#81858b]">
                 قیمت کالاها ({toPersianDigits(String(cart.itemCount))})
               </span>
-              <span className="font-bold text-[#0c0c0c] dark:text-foreground">
+              <span className="shrink-0 font-bold tabular-nums text-[#0c0c0c] dark:text-foreground">
                 {formatPrice(cart.subtotal, currency)}
               </span>
             </div>
@@ -236,7 +238,7 @@ export default function CartPage() {
               <span className="font-bold text-[#0c0c0c] dark:text-foreground">
                 جمع سبد خرید
               </span>
-              <span className="text-[18px] font-black text-[#0c0c0c] dark:text-foreground">
+              <span className="shrink-0 text-[18px] font-black tabular-nums text-[#0c0c0c] dark:text-foreground">
                 {formatPrice(cart.subtotal, currency)}
               </span>
             </div>

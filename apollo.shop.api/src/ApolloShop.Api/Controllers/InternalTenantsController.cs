@@ -34,6 +34,24 @@ public class InternalTenantsController : ControllerBase
         CancellationToken cancellationToken) =>
         Ok(await _mediator.Send(new CreateSsoCodeCommand(slug, request.Email), cancellationToken));
 
+    [HttpPatch("tenants/{slug}/status")]
+    [RequireProvisioningKey]
+    public async Task<ActionResult<TenantDto>> SetStatus(
+        string slug,
+        [FromBody] SetTenantActiveRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(await _mediator.Send(new SetTenantActiveCommand(slug, request.IsActive), cancellationToken));
+
+    [HttpDelete("tenants/{slug}")]
+    [RequireProvisioningKey]
+    public async Task<IActionResult> Delete(
+        string slug,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeleteTenantCommand(slug), cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>
     /// Called by the shop admin UI after the Apollo redirect. The one-time code is the credential,
     /// so no provisioning key is required (the browser must not hold it).

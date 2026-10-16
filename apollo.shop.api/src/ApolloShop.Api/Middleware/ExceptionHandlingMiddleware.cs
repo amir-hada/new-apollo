@@ -53,13 +53,20 @@ public class ExceptionHandlingMiddleware
             _logger.LogWarning(exception, "Handled domain/application exception");
         }
 
+        var detail = exception switch
+        {
+            ValidationException validation when validation.Errors.Count > 0 =>
+                validation.Errors.Values.SelectMany(messages => messages).FirstOrDefault()
+                ?? validation.Message,
+            DomainException or NotFoundException or ConflictException => exception.Message,
+            _ => _environment.IsDevelopment() ? exception.Message : "خطای غیرمنتظره‌ای رخ داد.",
+        };
+
         var problem = new ProblemDetails
         {
             Status = status,
             Title = title,
-            Detail = exception is DomainException or ValidationException or NotFoundException or ConflictException
-                ? exception.Message
-                : (_environment.IsDevelopment() ? exception.Message : "An unexpected error occurred."),
+            Detail = detail,
             Instance = context.Request.Path
         };
 

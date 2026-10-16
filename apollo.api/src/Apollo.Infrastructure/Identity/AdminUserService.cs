@@ -1,4 +1,5 @@
 using Apollo.Application.Abstractions.Identity;
+using Apollo.Application.Abstractions.Shop;
 using Apollo.Application.Abstractions.Storage;
 using Apollo.Application.Common.Exceptions;
 using Apollo.Domain.Constants;
@@ -6,6 +7,7 @@ using Apollo.Infrastructure.Identity;
 using Apollo.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Apollo.Infrastructure.Identity;
 
@@ -14,15 +16,21 @@ public sealed class AdminUserService : IAdminUserService
     private readonly ApplicationDbContext _dbContext;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IFileStorageService _fileStorageService;
+    private readonly IShopProvisioningClient _shopClient;
+    private readonly ILogger<AdminUserService> _logger;
 
     public AdminUserService(
         ApplicationDbContext dbContext,
         UserManager<ApplicationUser> userManager,
-        IFileStorageService fileStorageService)
+        IFileStorageService fileStorageService,
+        IShopProvisioningClient shopClient,
+        ILogger<AdminUserService> logger)
     {
         _dbContext = dbContext;
         _userManager = userManager;
         _fileStorageService = fileStorageService;
+        _shopClient = shopClient;
+        _logger = logger;
     }
 
     public async Task SetUserActiveStatusAsync(
@@ -81,6 +89,31 @@ public sealed class AdminUserService : IAdminUserService
             ?? throw new NotFoundException("کاربر یافت نشد.");
 
         await EnsureNotLastActiveAdminAsync(user, cancellationToken);
+
+        var platformSlugs = await _dbContext.UserPlatforms
+            .AsNoTracking()
+            .Where(platform =>
+                platform.UserId == userId &&
+                platform.TenantSlug != null &&
+                platform.TenantSlug != "")
+            .Select(platform => platform.TenantSlug!)
+            .ToListAsync(cancellationToken);
+
+        foreach (var slug in platformSlugs)
+        {
+            try
+            {
+                await _shopClient.DeleteTenantAsync(slug, cancellationToken);
+            }
+            catch (ShopProvisioningException exception)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Failed to delete shop tenant {Slug} while removing user {UserId}.",
+                    slug,
+                    userId);
+            }
+        }
 
         if (!string.IsNullOrWhiteSpace(user.PhoneNumber))
         {

@@ -129,7 +129,7 @@ export function AmazingOffers({ products }: { products: ProductListItem[] }) {
   };
 
   return (
-    <section className="w-full px-[5px] pt-3 sm:pt-4">
+    <section className="w-full px-3 pt-3 sm:px-4 sm:pt-4">
       <div className="relative overflow-hidden rounded-md bg-[linear-gradient(105deg,var(--primary)_0%,color-mix(in_oklab,var(--primary)_78%,#111)_55%,color-mix(in_oklab,var(--primary)_55%,#0a0a0a)_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.12)]">
         <div
           aria-hidden
@@ -196,17 +196,19 @@ export function AmazingOffers({ products }: { products: ProductListItem[] }) {
           <div
             ref={scrollerRef}
             className={cn(
-              "flex gap-2.5 overflow-x-auto px-2 pb-1 pt-1 sm:gap-3 sm:px-4",
+              "flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-2 pb-1 pt-1 sm:gap-3 sm:px-4",
               "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
             )}
           >
             {items.map((product) => (
-              <AmazingProductCard key={product.id} product={product} />
+              <div key={product.id} className="snap-start">
+                <AmazingProductCard product={product} />
+              </div>
             ))}
 
             <Link
               href="/products?sort=featured"
-              className="flex w-[120px] shrink-0 flex-col items-center justify-center gap-2 rounded-md bg-white/10 px-3 text-center text-white ring-1 ring-white/20 transition hover:bg-white/15 sm:w-[140px]"
+              className="flex w-[120px] shrink-0 snap-start flex-col items-center justify-center gap-2 rounded-md bg-white/10 px-3 text-center text-white ring-1 ring-white/20 transition hover:bg-white/15 sm:w-[140px]"
             >
               <span className="inline-flex size-10 items-center justify-center rounded-md bg-white/15">
                 <ChevronLeft className="size-5" />

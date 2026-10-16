@@ -4,28 +4,34 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Baby,
+  BookOpen,
   Briefcase,
   ChevronDown,
   ChevronLeft,
   Coins,
   CreditCard,
+  Dumbbell,
+  Gem,
   Gift,
-  HeartPulse,
+  Heart,
   Home,
   Laptop,
-  LayoutGrid,
   Menu,
   Package,
-  ShoppingBag,
+  Percent,
+  Ruler,
+  Shield,
+  Shirt,
   ShoppingCart,
   Smartphone,
-  Store,
+  Sparkles,
+  Truck,
   User,
-  Watch,
+  Utensils,
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { NavbarSearch } from "@/features/search/NavbarSearch";
@@ -34,35 +40,36 @@ import { useAuthStore } from "@/lib/auth-store";
 import { useCartStore } from "@/lib/cart-store";
 import { useSiteSettings } from "@/lib/use-site-settings";
 import { useShopSettings } from "@/lib/shop-settings-api";
+import {
+  getShopIndustryPreset,
+  type ShopNavIconKey,
+} from "@/lib/shop-industry-presets";
 import { toPersianDigits } from "@/features/auth/normalize-phone";
 import { cn } from "@/lib/utils";
 import type { Cart, CategoryTree } from "@/types/api";
 
-const bottomNav = [
-  { href: "/products", label: "خرید سازمانی", icon: Briefcase },
-  { href: "/products", label: "کارت هدیه", icon: Gift },
-  {
-    href: "/products?sort=featured",
-    label: "کالاهای استوک",
-    icon: Package,
-    badge: "جدید",
-  },
-  { href: "/products", label: "خرید اقساطی", icon: CreditCard },
-  { href: "/blog", label: "خرید طلای دیجیتال", icon: Coins },
-] as const;
-
-const categoryIcons: LucideIcon[] = [
-  Smartphone,
-  Laptop,
-  Watch,
-  Home,
-  ShoppingBag,
-  HeartPulse,
-  Baby,
-  Package,
-  LayoutGrid,
-  Gift,
-];
+const NAV_ICONS: Record<ShopNavIconKey, LucideIcon> = {
+  briefcase: Briefcase,
+  gift: Gift,
+  package: Package,
+  creditCard: CreditCard,
+  coins: Coins,
+  shirt: Shirt,
+  ruler: Ruler,
+  percent: Percent,
+  sparkles: Sparkles,
+  smartphone: Smartphone,
+  shield: Shield,
+  truck: Truck,
+  bookOpen: BookOpen,
+  utensils: Utensils,
+  baby: Baby,
+  laptop: Laptop,
+  gem: Gem,
+  dumbbell: Dumbbell,
+  home: Home,
+  heart: Heart,
+};
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -97,6 +104,18 @@ export function SiteHeader() {
   const nav = settings.navbar;
   const brandName = shopSettings?.shopTitle || nav.brandName;
   const logoUrl = shopSettings?.logoUrl;
+  const industryPreset = useMemo(
+    () => getShopIndustryPreset(shopSettings?.industryKey),
+    [shopSettings?.industryKey],
+  );
+  const bottomNav = industryPreset.headerNav;
+  const categoryIcons = useMemo(
+    () =>
+      industryPreset.categoryIcons.map(
+        (key) => NAV_ICONS[key] ?? Package,
+      ),
+    [industryPreset.categoryIcons],
+  );
 
   const { data: cartData } = useQuery({
     queryKey: ["cart"],
@@ -199,17 +218,17 @@ export function SiteHeader() {
   const logoBlock = (
     <Link
       href="/"
-      className="inline-flex shrink-0 items-center gap-2 text-lg font-extrabold tracking-tight text-[#3f4064] dark:text-foreground sm:text-xl"
+      className="inline-flex min-w-0 max-w-[42vw] items-center gap-2 text-lg font-extrabold tracking-tight text-[#3f4064] dark:text-foreground sm:max-w-[220px] sm:text-xl lg:max-w-none lg:shrink-0"
     >
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={logoUrl}
           alt={brandName}
-          className="h-9 w-auto max-w-[150px] object-contain"
+          className="h-9 w-auto max-w-full object-contain"
         />
       ) : (
-        brandName
+        <span className="truncate">{brandName}</span>
       )}
     </Link>
   );
@@ -229,7 +248,7 @@ export function SiteHeader() {
     <button
       type="button"
       onClick={() => router.push("/account")}
-      className="inline-flex h-11 max-w-[11rem] items-center gap-2 rounded-md border border-[#e0e0e2] bg-background px-3 text-[13px] font-medium text-[#3f4064] transition hover:bg-muted dark:border-white/10 dark:text-foreground"
+      className="inline-flex h-11 max-w-[7.5rem] items-center gap-1.5 rounded-md border border-[#e0e0e2] bg-background px-2.5 text-[13px] font-medium text-[#3f4064] transition hover:bg-muted sm:max-w-[11rem] sm:gap-2 sm:px-3 dark:border-white/10 dark:text-foreground"
       title={displayName}
     >
       <User className="size-4 shrink-0" strokeWidth={1.75} />
@@ -238,11 +257,15 @@ export function SiteHeader() {
   ) : (
     <Link
       href="/login"
-      className="inline-flex h-11 items-center rounded-md border border-[#e0e0e2] bg-background px-3.5 text-[13px] font-medium text-[#3f4064] transition hover:bg-muted dark:border-white/10 dark:text-foreground"
+      className="inline-flex h-11 items-center rounded-md border border-[#e0e0e2] bg-background px-2.5 text-[13px] font-medium text-[#3f4064] transition hover:bg-muted sm:px-3.5 dark:border-white/10 dark:text-foreground"
+      aria-label="ورود یا ثبت نام"
     >
-      ورود
-      <span className="mx-1.5 text-[#a1a3a8]">|</span>
-      ثبت نام
+      <span className="sm:hidden">ورود</span>
+      <span className="hidden sm:inline">
+        ورود
+        <span className="mx-1.5 text-[#a1a3a8]">|</span>
+        ثبت نام
+      </span>
     </Link>
   );
 
@@ -321,7 +344,7 @@ export function SiteHeader() {
           onClick={() => setCatsOpen(false)}
           aria-hidden
         />
-        <div className="absolute inset-x-0 top-full z-50 hidden px-[5px] sm:px-3 lg:block lg:px-4">
+        <div className="absolute inset-x-0 top-full z-50 hidden px-3 sm:px-4 lg:block">
           <div
             ref={megaMenuRef}
             className="flex h-[min(72vh,520px)] max-w-full overflow-hidden rounded-b-md border border-t-0 border-[#e0e0e2] bg-background shadow-[0_12px_40px_rgba(0,0,0,0.12)] dark:border-white/10"
@@ -433,7 +456,7 @@ export function SiteHeader() {
   const bottomNavLinks = (
     <nav className="flex items-center gap-1">
       {bottomNav.map((item) => {
-        const Icon = item.icon;
+        const Icon = NAV_ICONS[item.icon] ?? Package;
         return (
           <Link
             key={item.label}
@@ -442,7 +465,7 @@ export function SiteHeader() {
           >
             <Icon className="size-4 text-[#81858b]" strokeWidth={1.75} />
             {item.label}
-            {"badge" in item && item.badge ? (
+            {item.badge ? (
               <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">
                 {item.badge}
               </span>
@@ -459,7 +482,7 @@ export function SiteHeader() {
       className="relative sticky top-0 z-50 border-b border-[#e0e0e2] bg-background dark:border-white/10"
     >
       {/* موبایل / تبلت */}
-      <div className="flex items-center gap-3 px-[5px] py-3 sm:px-3 lg:hidden">
+      <div className="flex items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4 lg:hidden">
         <button
           type="button"
           className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-foreground hover:bg-muted"
@@ -469,12 +492,12 @@ export function SiteHeader() {
           {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
         </button>
         {logoBlock}
-        <div className="ms-auto">{actionsBlock}</div>
+        <div className="ms-auto min-w-0">{actionsBlock}</div>
       </div>
 
       {/* دسکتاپ: لبهٔ چپ سرچ با لبهٔ آخرین دکمه نوبار یکی می‌شود */}
       <div className="hidden lg:block">
-        <div className="flex items-center justify-between gap-6 px-[5px] py-3 sm:px-3 lg:px-4">
+        <div className="flex items-center justify-between gap-6 px-3 py-3 sm:px-4">
           <div className="flex min-w-0 items-center gap-4">
             <div ref={logoWrapRef}>{logoBlock}</div>
             {searchForm}
@@ -483,19 +506,12 @@ export function SiteHeader() {
         </div>
 
         {nav.showCategories ? (
-          <div className="flex items-center justify-between gap-6 border-t border-[#e0e0e2] px-[5px] py-2.5 sm:px-3 lg:px-4 dark:border-white/10">
+          <div className="flex items-center gap-6 border-t border-[#e0e0e2] px-3 py-2.5 sm:px-4 dark:border-white/10">
             <div ref={navRowRef} className="flex w-max items-center gap-1">
               {categoriesTrigger}
               <div className="mx-2 h-4 w-px shrink-0 bg-[#e0e0e2] dark:bg-white/10" />
               {bottomNavLinks}
             </div>
-            <Link
-              href="/login"
-              className="hidden shrink-0 items-center gap-1.5 px-1 text-[13px] font-medium text-[#3f4064] transition hover:text-primary xl:inline-flex dark:text-foreground"
-            >
-              <Store className="size-4 text-[#81858b]" strokeWidth={1.75} />
-              فروشنده شو
-            </Link>
           </div>
         ) : null}
       </div>
@@ -554,7 +570,7 @@ export function SiteHeader() {
 
           <nav className="flex flex-col gap-0.5">
             {bottomNav.map((item) => {
-              const Icon = item.icon;
+              const Icon = NAV_ICONS[item.icon] ?? Package;
               return (
                 <Link
                   key={item.label}
@@ -563,7 +579,7 @@ export function SiteHeader() {
                 >
                   <Icon className="size-4 text-[#81858b]" />
                   {item.label}
-                  {"badge" in item && item.badge ? (
+                  {item.badge ? (
                     <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
                       {item.badge}
                     </span>

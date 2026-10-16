@@ -1,83 +1,34 @@
 "use client";
 
-import { useState } from "react";
-import {
-  ChevronDown,
-  ListChecks,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { ListChecks, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FloatingField } from "@/components/ui/floating-field";
-import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   formatGroupedPersianDigits,
   normalizeDigits,
   toPersianDigits,
 } from "@/features/auth/normalize-phone";
-import { priceToPersianWords } from "@/lib/persian-number-words";
+import {
+  getIndustrySpecTemplates,
+  type IndustrySpecTemplate,
+} from "@/lib/shop-industry-presets";
+import {
+  looksLikeColorSpec,
+  resolveSwatchColor,
+  suggestColorHex,
+} from "@/lib/product-color";
+import { useShopSettings } from "@/lib/shop-settings-api";
 import { cn } from "@/lib/utils";
-import { useShopCurrency } from "@/providers/ShopCurrencyProvider";
 import type { ProductSpec, ProductSpecValue } from "@/types/api";
 
-function Hint({ text }: { text: string }) {
-  return (
-    <TooltipProvider delay={200}>
-      <Tooltip>
-        <TooltipTrigger
-          type="button"
-          className={cn(
-            "inline-flex size-3.5 shrink-0 items-center justify-center rounded-full",
-            "text-muted-foreground/75 transition-colors hover:text-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-          )}
-          aria-label="راهنما"
-          onClick={(e) => e.preventDefault()}
-        >
-          <svg viewBox="0 0 16 16" className="size-3.5" fill="none" aria-hidden>
-            <circle
-              cx="8"
-              cy="8"
-              r="6.25"
-              stroke="currentColor"
-              strokeWidth="1.35"
-            />
-            <path
-              d="M6.35 6.15c0-1.05.8-1.8 1.85-1.8s1.85.72 1.85 1.7c0 .78-.4 1.2-1.05 1.58-.58.34-.8.58-.8 1.12v.25"
-              stroke="currentColor"
-              strokeWidth="1.35"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <circle cx="8" cy="11.35" r="0.85" fill="currentColor" />
-          </svg>
-        </TooltipTrigger>
-        <TooltipContent
-          side="top"
-          align="start"
-          className="max-w-[18rem] px-3 py-2 text-start text-[11px] leading-5 font-normal"
-        >
-          {text}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
-
-function emptyValue(sortOrder: number): ProductSpecValue {
-  return {
-    id: null,
-    value: "",
-    priceAdjustment: 0,
-    sortOrder,
-  };
+function emptyValue(
+  sortOrder: number,
+  value = "",
+  colorHex: string | null = null,
+): ProductSpecValue {
+  return { id: null, value, priceAdjustment: 0, sortOrder, colorHex };
 }
 
 export function emptySpec(sortOrder: number): ProductSpec {
@@ -86,352 +37,517 @@ export function emptySpec(sortOrder: number): ProductSpec {
     name: "",
     isOrderParameter: false,
     sortOrder,
-    values: [emptyValue(1)],
+    values: [],
   };
 }
 
-function formatAdjustmentInput(adj: number) {
+function specFromTemplate(
+  template: IndustrySpecTemplate,
+  sortOrder: number,
+): ProductSpec {
+  const samples = (template.sampleValues ?? []).filter((v) => v.trim());
+  const values =
+    samples.length > 0
+      ? samples.map((value, i) => emptyValue(i + 1, value))
+      : [];
+  const canOrder = template.isOrderParameter && values.length >= 2;
+  return {
+    id: null,
+    name: template.name,
+    isOrderParameter: canOrder,
+    sortOrder,
+    values,
+  };
+}
+
+function formatAdj(adj: number) {
   const n = Math.trunc(adj || 0);
   if (n === 0) return "";
   const abs = formatGroupedPersianDigits(String(Math.abs(n)));
   return n < 0 ? `-${abs}` : abs;
 }
 
-function adjustmentWords(adj: number, currency: string) {
-  const n = Math.trunc(adj || 0);
-  if (n === 0) return "";
-  const words = priceToPersianWords(Math.abs(n), currency);
-  if (!words) return "";
-  return n > 0 ? `افزایش ${words}` : `کاهش ${words}`;
+function parseAdj(raw: string) {
+  const trimmed = raw.trim();
+  if (!trimmed) return 0;
+  const negative = trimmed.startsWith("-") || trimmed.startsWith("−");
+  const digits = normalizeDigits(trimmed.replace(/^[-−]/, ""));
+  const n = digits ? Number(digits) : 0;
+  return negative ? -n : n;
+}
+
+function filledCount(spec: ProductSpec) {
+  return spec.values.filter((v) => v.value.trim()).length;
 }
 
 type ProductSpecsEditorProps = {
   specs: ProductSpec[];
   onChange: (specs: ProductSpec[]) => void;
+  compact?: boolean;
 };
 
 export function ProductSpecsEditor({
   specs,
   onChange,
+  compact = false,
 }: ProductSpecsEditorProps) {
-  const shopCurrency = useShopCurrency();
-  const [openIndex, setOpenIndex] = useState<number | null>(
-    specs.length > 0 ? 0 : null,
+  const { data: shop } = useShopSettings();
+  const templates = getIndustrySpecTemplates(shop?.industryKey);
+  const [active, setActive] = useState(0);
+  const [draft, setDraft] = useState("");
+  const [priceIndex, setPriceIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (specs.length === 0) {
+      setActive(0);
+      return;
+    }
+    if (active > specs.length - 1) setActive(specs.length - 1);
+  }, [specs.length, active]);
+
+  useEffect(() => {
+    setDraft("");
+    setPriceIndex(null);
+  }, [active]);
+
+  const existingNames = new Set(
+    specs.map((s) => s.name.trim().toLowerCase()).filter(Boolean),
   );
+  const availableTemplates = templates.filter(
+    (t) => !existingNames.has(t.name.trim().toLowerCase()),
+  );
+
+  const current = specs[active] ?? null;
 
   const updateSpec = (index: number, patch: Partial<ProductSpec>) => {
     onChange(specs.map((s, i) => (i === index ? { ...s, ...patch } : s)));
   };
 
-  const updateValue = (
-    specIndex: number,
-    valueIndex: number,
-    patch: Partial<ProductSpecValue>,
-  ) => {
-    const spec = specs[specIndex];
-    if (!spec) return;
-    updateSpec(specIndex, {
-      values: spec.values.map((v, i) =>
-        i === valueIndex ? { ...v, ...patch } : v,
-      ),
-    });
-  };
-
-  const addSpec = () => {
-    const next = [...specs, emptySpec(specs.length + 1)];
+  const addSpec = (seed?: IndustrySpecTemplate) => {
+    const next = [
+      ...specs,
+      seed
+        ? specFromTemplate(seed, specs.length + 1)
+        : emptySpec(specs.length + 1),
+    ];
     onChange(next);
-    setOpenIndex(next.length - 1);
+    setActive(next.length - 1);
   };
 
   const removeSpec = (index: number) => {
     const next = specs.filter((_, i) => i !== index);
     onChange(next);
-    setOpenIndex((prev) => {
-      if (next.length === 0) return null;
-      if (prev == null) return 0;
-      if (prev === index) return Math.min(index, next.length - 1);
+    setActive((prev) => {
+      if (next.length === 0) return 0;
       if (prev > index) return prev - 1;
+      if (prev === index) return Math.min(index, next.length - 1);
       return prev;
     });
   };
 
+  const isColorAttr = current ? looksLikeColorSpec(current.name) : false;
+
+  const addValue = () => {
+    if (!current) return;
+    const value = draft.trim();
+    if (!value) return;
+    if (current.values.some((v) => v.value.trim() === value)) {
+      setDraft("");
+      return;
+    }
+    const colorHex = looksLikeColorSpec(current.name)
+      ? suggestColorHex(value)
+      : null;
+    const values = [
+      ...current.values,
+      emptyValue(current.values.length + 1, value, colorHex),
+    ];
+    updateSpec(active, {
+      values,
+      isOrderParameter:
+        values.length >= 2 ? current.isOrderParameter : false,
+    });
+    setDraft("");
+  };
+
+  const removeValue = (valueIndex: number) => {
+    if (!current) return;
+    const values = current.values.filter((_, i) => i !== valueIndex);
+    updateSpec(active, {
+      values,
+      isOrderParameter: values.length >= 2 ? current.isOrderParameter : false,
+    });
+    if (priceIndex === valueIndex) setPriceIndex(null);
+  };
+
+  const canChoose = current ? filledCount(current) >= 2 : false;
+  const chooseOn = Boolean(current?.isOrderParameter && canChoose);
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-2">
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pe-0.5 pb-2">
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 px-0.5">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <p className="text-[11px] font-medium text-muted-foreground">
-              ویژگی‌های محصول
+    <div
+      className={cn(
+        "flex min-h-0 flex-col gap-3",
+        compact ? "max-h-[min(52vh,380px)]" : "h-full flex-1",
+      )}
+    >
+      {/* میانبر */}
+      {availableTemplates.length > 0 ? (
+        <div className="flex shrink-0 flex-wrap gap-1.5">
+          {availableTemplates.map((t) => (
+            <button
+              key={t.name}
+              type="button"
+              onClick={() => addSpec(t)}
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-dashed border-border px-2.5 text-[11px] text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+            >
+              <Plus className="size-3" />
+              {t.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {specs.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/15 px-4 py-8 text-center">
+          <ListChecks className="size-8 text-muted-foreground/50" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium">هنوز ویژگی ندارید</p>
+            <p className="text-xs text-muted-foreground">
+              از میانبر بالا یا دکمه زیر استفاده کنید
             </p>
-            <Hint text="هر ویژگی می‌تواند چند مقدار داشته باشد (مثل رنگ: مشکی، سفید). اگر پارامتر سفارش روشن باشد، خریدار یکی از مقادیر را هنگام خرید انتخاب می‌کند." />
-            {specs.length > 0 ? (
-              <span className="rounded-md bg-muted/60 px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
-                {toPersianDigits(String(specs.length))} مورد
-              </span>
-            ) : null}
           </div>
-          <Button
-            type="button"
-            size="sm"
-            className="h-9 shrink-0 touch-manipulation gap-1.5 sm:h-8"
-            onClick={addSpec}
-          >
+          <Button type="button" size="sm" className="h-8 gap-1.5" onClick={() => addSpec()}>
             <Plus className="size-3.5" />
-            <span className="max-sm:hidden">افزودن ویژگی</span>
-            <span className="sm:hidden">افزودن</span>
+            ویژگی جدید
           </Button>
         </div>
-
-        {specs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/80 bg-card/40 px-6 py-14 text-center">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-muted/50">
-              <ListChecks className="size-5 text-muted-foreground/70" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium">هنوز ویژگی‌ای ثبت نشده</p>
-              <p className="max-w-sm text-xs text-pretty text-muted-foreground">
-                مواردی مثل رنگ، حجم یا حافظه را اضافه کنید تا در صفحه محصول
-                نمایش داده شوند.
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={addSpec}
-            >
-              <Plus className="size-3.5" />
-              افزودن اولین ویژگی
-            </Button>
-          </div>
-        ) : (
-          specs.map((spec, index) => {
-            const open = openIndex === index;
-            const title =
-              spec.name.trim() ||
-              `ویژگی ${toPersianDigits(String(index + 1))}`;
-            const multi = spec.values.length >= 2;
-            const orderEnabled = multi && spec.isOrderParameter;
-            const filledCount = spec.values.filter((v) =>
-              v.value.trim(),
-            ).length;
-
-            return (
-              <div
-                key={`${spec.id ?? "new"}-${index}`}
-                className="overflow-hidden rounded-xl border border-border/80 bg-card/40"
+      ) : (
+        <div
+          className={cn(
+            "grid min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card",
+            compact
+              ? "grid-rows-[auto_minmax(0,1fr)]"
+              : "grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[200px_minmax(0,1fr)] md:grid-rows-1",
+          )}
+        >
+          {/* لیست ویژگی‌ها — جدا و قابل تشخیص */}
+          <aside
+            className={cn(
+              "flex shrink-0 flex-col border-border bg-muted/25",
+              compact
+                ? "border-b"
+                : "border-b md:border-b-0 md:border-e",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 border-b border-border/70 px-2.5 py-2">
+              <span className="text-[11px] font-semibold text-muted-foreground">
+                ویژگی‌ها ({toPersianDigits(String(specs.length))})
+              </span>
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                className="size-7"
+                title="ویژگی جدید"
+                onClick={() => addSpec()}
               >
-                <div className="flex items-center gap-1 p-1.5 sm:p-2">
+                <Plus className="size-3.5" />
+              </Button>
+            </div>
+
+            <div
+              className={cn(
+                "flex gap-1 overflow-x-auto p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+                !compact && "md:flex-col md:overflow-y-auto md:overflow-x-hidden",
+              )}
+            >
+              {specs.map((spec, index) => {
+                const selected = index === active;
+                const count = filledCount(spec);
+                const label =
+                  spec.name.trim() ||
+                  `ویژگی ${toPersianDigits(String(index + 1))}`;
+                const buyerPick =
+                  spec.isOrderParameter && count >= 2;
+
+                return (
                   <button
+                    key={`${spec.id ?? "s"}-${index}`}
                     type="button"
-                    className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-start transition-colors hover:bg-muted/40"
-                    onClick={() =>
-                      setOpenIndex((prev) => (prev === index ? null : index))
-                    }
+                    onClick={() => setActive(index)}
+                    className={cn(
+                      "flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-start transition",
+                      "min-w-[7.5rem] md:min-w-0 md:w-full",
+                      selected
+                        ? "bg-background shadow-sm ring-1 ring-border"
+                        : "hover:bg-background/70",
+                    )}
                   >
-                    <ChevronDown
+                    <span
                       className={cn(
-                        "size-4 shrink-0 text-muted-foreground transition-transform",
-                        open ? "rotate-0" : "-rotate-90",
+                        "size-2 shrink-0 rounded-full",
+                        selected ? "bg-primary" : "bg-border",
                       )}
                     />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{title}</p>
-                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                        {toPersianDigits(String(filledCount))} مقدار
-                        {orderEnabled ? " · پارامتر سفارش" : ""}
-                      </p>
-                    </div>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-semibold">
+                        {label}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+                        {toPersianDigits(String(count))} گزینه
+                        {buyerPick ? " · انتخابی" : ""}
+                      </span>
+                    </span>
                   </button>
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="ghost"
-                    className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    title="حذف ویژگی"
-                    onClick={() => removeSpec(index)}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
+                );
+              })}
+            </div>
+          </aside>
 
-                {open ? (
-                  <div className="space-y-3 border-t border-border/60 p-2.5 sm:p-3">
-                    <div className="grid content-start gap-3 sm:grid-cols-2">
-                      <FloatingField
-                        label="عنوان ویژگی"
-                        required
-                        value={spec.name}
-                        onChange={(value) =>
-                          updateSpec(index, { name: value })
-                        }
-                        hint="مثلاً رنگ، حجم، حافظه"
-                        surfaceClassName="bg-card"
-                      />
-                      <div className="flex flex-col gap-2.5 px-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                        <div className="flex min-w-0 items-start gap-1.5">
-                          <div className="min-w-0">
-                            <Label
-                              className={cn(
-                                "text-sm",
-                                !multi && "text-muted-foreground",
-                              )}
-                            >
-                              پارامتر سفارش
-                            </Label>
-                            <p className="text-xs text-pretty text-muted-foreground">
-                              {multi
-                                ? "خریدار یکی از مقادیر را انتخاب می‌کند"
-                                : "حداقل ۲ مقدار لازم است"}
-                            </p>
-                          </div>
-                          <Hint text="با حداقل دو مقدار فعال می‌شود. خریدار یکی را انتخاب می‌کند و می‌توانید برای هر مقدار تغییر قیمت جداگانه بگذارید." />
-                        </div>
-                        <Switch
-                          className="self-end sm:self-auto"
-                          checked={orderEnabled}
-                          disabled={!multi}
-                          onCheckedChange={(checked) =>
-                            updateSpec(index, {
-                              isOrderParameter: checked,
-                              values: spec.values.map((v) => ({
-                                ...v,
-                                priceAdjustment: checked
-                                  ? v.priceAdjustment
-                                  : 0,
-                              })),
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
+          {/* پنل ویرایش فقط یک ویژگی */}
+          {current ? (
+            <div className="flex min-h-0 min-w-0 flex-col">
+              <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2.5">
+                <Input
+                  value={current.name}
+                  placeholder="نام ویژگی (مثل رنگ)"
+                  className="h-9 flex-1 text-sm font-medium"
+                  onChange={(e) =>
+                    updateSpec(active, { name: e.target.value })
+                  }
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="size-9 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  title="حذف این ویژگی"
+                  onClick={() => removeSpec(active)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
 
-                    <div className="space-y-2">
-                      <p className="px-0.5 text-[11px] font-medium text-muted-foreground">
-                        مقادیر
-                      </p>
-                      <div className="space-y-2.5">
-                        {spec.values.map((val, valueIndex) => {
-                          const adj = Math.trunc(val.priceAdjustment || 0);
-                          const words = orderEnabled
-                            ? adjustmentWords(adj, shopCurrency)
-                            : "";
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-medium text-muted-foreground">
+                      گزینه‌ها
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {isColorAttr
+                        ? "دایره = رنگ نمایشی در فروشگاه"
+                        : chooseOn
+                          ? "± = تفاوت قیمت"
+                          : null}
+                    </p>
+                  </div>
 
-                          return (
+                  {current.values.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {current.values.map((val, valueIndex) => {
+                        const adj = Math.trunc(val.priceAdjustment || 0);
+                        const priceOpen = priceIndex === valueIndex;
+                        const swatch = resolveSwatchColor(
+                          val.value,
+                          val.colorHex,
+                        );
+                        return (
+                          <div
+                            key={`${val.id ?? "v"}-${valueIndex}`}
+                            className="inline-flex flex-col gap-1"
+                          >
                             <div
-                              key={`${val.id ?? "v"}-${valueIndex}`}
                               className={cn(
-                                "grid items-start gap-2",
-                                orderEnabled
-                                  ? "grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto]"
-                                  : "grid-cols-[minmax(0,1fr)_auto]",
+                                "inline-flex items-center rounded-md border bg-muted/30",
+                                chooseOn && adj !== 0
+                                  ? "border-primary/35"
+                                  : "border-border",
                               )}
                             >
-                              <FloatingField
-                                label={`مقدار ${toPersianDigits(String(valueIndex + 1))}`}
-                                value={val.value}
-                                onChange={(value) =>
-                                  updateValue(index, valueIndex, { value })
-                                }
-                                surfaceClassName="bg-card"
-                                className={orderEnabled ? "col-span-1 sm:col-auto" : undefined}
-                              />
-
-                              {orderEnabled ? (
-                                <div className="col-span-2 space-y-1 sm:col-span-1 sm:col-auto">
-                                  <FloatingField
-                                    label="تغییر قیمت"
-                                    dir="ltr"
-                                    value={formatAdjustmentInput(adj)}
-                                    onChange={(raw) => {
-                                      const trimmed = raw.trim();
-                                      const negative =
-                                        trimmed.startsWith("-") ||
-                                        trimmed.startsWith("−");
-                                      const digits = normalizeDigits(
-                                        trimmed.replace(/^[-−]/, ""),
-                                      );
-                                      const n = digits ? Number(digits) : 0;
-                                      updateValue(index, valueIndex, {
-                                        priceAdjustment: negative ? -n : n,
-                                      });
-                                    }}
-                                    hint="مثبت = افزایش، منفی = کاهش نسبت به قیمت پایه"
-                                    surfaceClassName="bg-card"
+                              {isColorAttr ? (
+                                <label
+                                  className="relative ms-1.5 inline-flex size-6 shrink-0 cursor-pointer overflow-hidden rounded-full border border-border shadow-inner"
+                                  title="انتخاب رنگ سواچ"
+                                  style={{ backgroundColor: swatch }}
+                                >
+                                  <input
+                                    type="color"
+                                    className="absolute inset-0 cursor-pointer opacity-0"
+                                    value={
+                                      /^#[0-9a-fA-F]{6}$/.test(swatch)
+                                        ? swatch
+                                        : "#808080"
+                                    }
+                                    onChange={(e) =>
+                                      updateSpec(active, {
+                                        values: current.values.map((v, i) =>
+                                          i === valueIndex
+                                            ? {
+                                                ...v,
+                                                colorHex: e.target.value,
+                                              }
+                                            : v,
+                                        ),
+                                      })
+                                    }
                                   />
-                                  <p
-                                    className={cn(
-                                      "min-h-4 px-1 text-[11px] leading-4 text-pretty break-words",
-                                      words
-                                        ? adj > 0
-                                          ? "text-emerald-700 dark:text-emerald-400"
-                                          : "text-rose-700 dark:text-rose-400"
-                                        : "text-muted-foreground/60",
-                                    )}
-                                  >
-                                    {words || "بدون تغییر قیمت"}
-                                  </p>
-                                </div>
+                                </label>
                               ) : null}
-
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="ghost"
-                                className={cn(
-                                  "size-11 shrink-0 touch-manipulation text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
-                                  orderEnabled
-                                    ? "row-start-1 justify-self-end sm:row-auto sm:justify-self-auto"
-                                    : "mt-0",
-                                )}
-                                disabled={spec.values.length <= 1}
-                                title="حذف مقدار"
-                                onClick={() => {
-                                  const values = spec.values.filter(
-                                    (_, i) => i !== valueIndex,
-                                  );
-                                  updateSpec(index, {
-                                    values,
-                                    isOrderParameter:
-                                      values.length >= 2
-                                        ? spec.isOrderParameter
-                                        : false,
+                              <input
+                                value={val.value}
+                                onChange={(e) => {
+                                  const nextName = e.target.value;
+                                  updateSpec(active, {
+                                    values: current.values.map((v, i) =>
+                                      i === valueIndex
+                                        ? {
+                                            ...v,
+                                            value: nextName,
+                                            // اگر ادمین هنوز رنگ دستی نزده، از نام پیشنهاد بده
+                                            colorHex:
+                                              isColorAttr && !v.colorHex
+                                                ? suggestColorHex(nextName)
+                                                : v.colorHex,
+                                          }
+                                        : v,
+                                    ),
                                   });
                                 }}
+                                className="w-[4.5rem] bg-transparent px-2 py-1.5 text-xs outline-none sm:w-24"
+                                placeholder={isColorAttr ? "آبی تیره" : "گزینه"}
+                              />
+                              {chooseOn ? (
+                                <button
+                                  type="button"
+                                  className="border-s border-border px-1.5 py-1.5 text-[10px] tabular-nums text-muted-foreground hover:bg-background"
+                                  onClick={() =>
+                                    setPriceIndex(
+                                      priceOpen ? null : valueIndex,
+                                    )
+                                  }
+                                >
+                                  {adj === 0
+                                    ? "±"
+                                    : adj > 0
+                                      ? `+${formatAdj(adj)}`
+                                      : formatAdj(adj)}
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                className="inline-flex size-7 items-center justify-center border-s border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                aria-label="حذف"
+                                onClick={() => removeValue(valueIndex)}
                               >
-                                <Trash2 className="size-3.5" />
-                              </Button>
+                                <X className="size-3" />
+                              </button>
                             </div>
-                          );
-                        })}
-                      </div>
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-8 gap-1.5 border-dashed"
-                        onClick={() =>
-                          updateSpec(index, {
-                            values: [
-                              ...spec.values,
-                              emptyValue(spec.values.length + 1),
-                            ],
-                          })
-                        }
-                      >
-                        <Plus className="size-3.5" />
-                        مقدار جدید
-                      </Button>
+                            {chooseOn && priceOpen ? (
+                              <Input
+                                dir="ltr"
+                                className="h-7 w-24 text-[11px]"
+                                placeholder="تفاوت قیمت"
+                                value={formatAdj(adj)}
+                                onChange={(e) =>
+                                  updateSpec(active, {
+                                    values: current.values.map((v, i) =>
+                                      i === valueIndex
+                                        ? {
+                                            ...v,
+                                            priceAdjustment: parseAdj(
+                                              e.target.value,
+                                            ),
+                                          }
+                                        : v,
+                                    ),
+                                  })
+                                }
+                              />
+                            ) : null}
+                          </div>
+                        );
+                      })}
                     </div>
+                  ) : (
+                    <p className="rounded-md bg-muted/30 px-2.5 py-2 text-[11px] text-muted-foreground">
+                      {isColorAttr
+                        ? "مثلاً «آبی تیره» بنویس و Enter بزن — بعد دایره را دقیق تنظیم کن"
+                        : "گزینه‌ای نیست — پایین بنویس و Enter بزن"}
+                    </p>
+                  )}
+
+                  <div className="flex gap-1.5">
+                    <Input
+                      value={draft}
+                      placeholder={
+                        isColorAttr ? "آبی تیره + Enter" : "گزینه + Enter"
+                      }
+                      className="h-9 flex-1 text-sm"
+                      onChange={(e) => setDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addValue();
+                        }
+                      }}
+                    />
+                    {isColorAttr && draft.trim() ? (
+                      <span
+                        className="size-9 shrink-0 rounded-full border border-border"
+                        style={{
+                          backgroundColor: suggestColorHex(draft),
+                        }}
+                        title="پیش‌نمایش رنگ"
+                      />
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="h-9 shrink-0 px-3"
+                      disabled={!draft.trim()}
+                      onClick={addValue}
+                    >
+                      <Plus className="size-3.5" />
+                    </Button>
                   </div>
-                ) : null}
+                </div>
+
+                <div
+                  className={cn(
+                    "flex items-center justify-between gap-3 rounded-lg border px-3 py-2",
+                    canChoose
+                      ? "border-border bg-muted/20"
+                      : "border-transparent bg-muted/10 opacity-60",
+                  )}
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium">خریدار انتخاب کند</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {canChoose
+                        ? "در فروشگاه یکی از گزینه‌ها را برمی‌گزیند"
+                        : "حداقل ۲ گزینه لازم است"}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={chooseOn}
+                    disabled={!canChoose}
+                    onCheckedChange={(checked) =>
+                      updateSpec(active, {
+                        isOrderParameter: checked,
+                        values: current.values.map((v) => ({
+                          ...v,
+                          priceAdjustment: checked ? v.priceAdjustment : 0,
+                        })),
+                      })
+                    }
+                  />
+                </div>
               </div>
-            );
-          })
-        )}
-      </div>
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

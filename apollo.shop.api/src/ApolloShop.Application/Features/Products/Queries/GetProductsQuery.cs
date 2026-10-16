@@ -62,9 +62,11 @@ public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, PagedRe
             query = query.Where(p => p.Brand != null && (p.Brand.Slug == brand || p.Brand.Name.ToLower() == brand));
         }
 
+        string? searchTerm = null;
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var s = request.Search.Trim().ToLower();
+            searchTerm = request.Search.Trim().ToLower();
+            var s = searchTerm;
             query = query.Where(p =>
                 p.Name.ToLower().Contains(s) ||
                 p.Slug.ToLower().Contains(s) ||
@@ -74,38 +76,64 @@ public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, PagedRe
                 (p.Category != null && p.Category.Name.ToLower().Contains(s)));
         }
 
+        // فیلتر قیمت روی قیمت مؤثر (تخفیف‌خورده در صورت وجود)
         if (request.MinPrice is not null)
         {
-            query = query.Where(p => p.BasePrice >= request.MinPrice);
+            query = query.Where(p => (p.DiscountPrice ?? p.BasePrice) >= request.MinPrice);
         }
 
         if (request.MaxPrice is not null)
         {
-            query = query.Where(p => p.BasePrice <= request.MaxPrice);
+            query = query.Where(p => (p.DiscountPrice ?? p.BasePrice) <= request.MaxPrice);
         }
 
-        query = (request.Sort?.ToLowerInvariant()) switch
+        var sortKey = request.Sort?.Trim().ToLowerInvariant();
+        query = sortKey switch
         {
-            "price" or "price_asc" or "cheapest" => query.OrderBy(p => p.DiscountPrice ?? p.BasePrice),
-            "price_desc" or "expensive" => query.OrderByDescending(p => p.DiscountPrice ?? p.BasePrice),
-            "name" => query.OrderBy(p => p.Name),
-            "name_desc" => query.OrderByDescending(p => p.Name),
-            "newest" => query.OrderByDescending(p => p.CreatedAtUtc),
-            "most_viewed" => query.OrderByDescending(p => _db.ProductViews.Count(v => v.ProductId == p.Id))
-                .ThenByDescending(p => p.CreatedAtUtc),
-            "best_selling" => query.OrderByDescending(p =>
+            "price" or "price_asc" or "cheapest" => query
+                .OrderBy(p => p.DiscountPrice ?? p.BasePrice)
+                .ThenBy(p => p.Id),
+            "price_desc" or "expensive" => query
+                .OrderByDescending(p => p.DiscountPrice ?? p.BasePrice)
+                .ThenBy(p => p.Id),
+            "name" => query.OrderBy(p => p.Name).ThenBy(p => p.Id),
+            "name_desc" => query.OrderByDescending(p => p.Name).ThenBy(p => p.Id),
+            "newest" => query.OrderByDescending(p => p.CreatedAtUtc).ThenBy(p => p.Id),
+            "most_viewed" => query
+                .OrderByDescending(p => _db.ProductViews.Count(v => v.ProductId == p.Id))
+                .ThenByDescending(p => p.CreatedAtUtc)
+                .ThenBy(p => p.Id),
+            "best_selling" => query
+                .OrderByDescending(p =>
                     _db.OrderItems.Where(oi => oi.ProductId == p.Id && PaidStatuses.Contains(oi.Order.Status))
                         .Sum(oi => (int?)oi.Quantity) ?? 0)
-                .ThenByDescending(p => p.CreatedAtUtc),
-            "featured" => query.OrderByDescending(p => p.DiscountPrice != null)
-                .ThenByDescending(p => p.CreatedAtUtc),
-            "buyer_suggestion" => query.OrderByDescending(p =>
-                    _db.ProductLikes.Count(l => l.ProductId == p.Id))
-                .ThenByDescending(p => p.CreatedAtUtc),
-            "fastest_shipping" => query.OrderByDescending(p => p.IsAvailable)
-                .ThenByDescending(p => p.CreatedAtUtc),
-            // مرتبط‌ترین / پیش‌فرض
-            _ => query.OrderByDescending(p => p.CreatedAtUtc)
+                .ThenByDescending(p => p.CreatedAtUtc)
+                .ThenBy(p => p.Id),
+            "featured" => query
+                .OrderByDescending(p => p.DiscountPrice != null)
+                .ThenByDescending(p =>
+                    p.DiscountPrice != null && p.BasePrice > 0
+                        ? (p.BasePrice - p.DiscountPrice.Value) / p.BasePrice
+                        : 0m)
+                .ThenByDescending(p => p.CreatedAtUtc)
+                .ThenBy(p => p.Id),
+            "buyer_suggestion" => query
+                .OrderByDescending(p =>
+                    _db.ProductComments
+                        .Where(c => c.ProductId == p.Id && c.IsApproved && c.Rating != null)
+                        .Select(c => (double?)c.Rating)
+                        .Average() ?? 0)
+                .ThenByDescending(p => _db.ProductLikes.Count(l => l.ProductId == p.Id))
+                .ThenByDescending(p => p.CreatedAtUtc)
+                .ThenBy(p => p.Id),
+            "fastest_shipping" => query
+                .OrderByDescending(p => p.IsAvailable)
+                .ThenByDescending(p => p.StockQuantity)
+                .ThenByDescending(p => p.CreatedAtUtc)
+                .ThenBy(p => p.Id),
+            // مرتبط‌ترین: با جستجو اولویت شروع‌با‌عبارت، بدون جستجو تخفیف‌دارها جلوتر
+            "relevant" or null or "" => ApplyRelevantSort(query, searchTerm),
+            _ => ApplyRelevantSort(query, searchTerm)
         };
 
         var total = await query.CountAsync(cancellationToken);
@@ -216,5 +244,25 @@ public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, PagedRe
         }
 
         return Math.Clamp(days / 7, 0, weekCount - 1);
+    }
+
+    private static IOrderedQueryable<Domain.Entities.Catalog.Product> ApplyRelevantSort(
+        IQueryable<Domain.Entities.Catalog.Product> query,
+        string? searchTerm)
+    {
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            var s = searchTerm;
+            return query
+                .OrderByDescending(p => p.Name.ToLower().StartsWith(s))
+                .ThenByDescending(p => p.DiscountPrice != null)
+                .ThenByDescending(p => p.CreatedAtUtc)
+                .ThenBy(p => p.Id);
+        }
+
+        return query
+            .OrderByDescending(p => p.DiscountPrice != null)
+            .ThenByDescending(p => p.CreatedAtUtc)
+            .ThenBy(p => p.Id);
     }
 }

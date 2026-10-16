@@ -366,6 +366,52 @@ namespace Apollo.Infrastructure.Persistence.Migrations
                     b.ToTable("PlatformConfigurations", (string)null);
                 });
 
+            modelBuilder.Entity("Apollo.Infrastructure.Persistence.Entities.PlatformSmsSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ApiKey")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("LineNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OrderMessageTemplate")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("OrderParameterName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("OrderTemplateId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OtpParameterName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("OtpTemplateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PlatformSmsSettings", (string)null);
+                });
+
             modelBuilder.Entity("Apollo.Infrastructure.Persistence.Entities.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -490,6 +536,11 @@ namespace Apollo.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("Name")
                         .IsRequired()

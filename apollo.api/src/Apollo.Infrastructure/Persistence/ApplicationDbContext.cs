@@ -34,9 +34,21 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Id
 
     public DbSet<PlatformConfiguration> PlatformConfigurations => Set<PlatformConfiguration>();
 
+    public DbSet<PlatformSmsSettings> PlatformSmsSettings => Set<PlatformSmsSettings>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        builder.Entity<PlatformSmsSettings>(entity =>
+        {
+            entity.ToTable("PlatformSmsSettings");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.ApiKey).HasMaxLength(512).IsRequired();
+            entity.Property(item => item.OtpParameterName).HasMaxLength(64).IsRequired();
+            entity.Property(item => item.OrderParameterName).HasMaxLength(64).IsRequired();
+            entity.Property(item => item.OrderMessageTemplate).HasMaxLength(500).IsRequired();
+        });
 
         builder.Entity<ApplicationUser>(entity =>
         {
@@ -169,6 +181,8 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Id
             entity.Property(platform => platform.ProvisioningStatus)
                 .HasConversion<int>()
                 .HasDefaultValue(SiteProvisioningStatus.Pending);
+            entity.Property(platform => platform.IsActive)
+                .HasDefaultValue(true);
             entity.HasIndex(platform => platform.TenantSlug)
                 .IsUnique()
                 .HasFilter("[TenantSlug] IS NOT NULL");

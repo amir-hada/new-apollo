@@ -99,7 +99,7 @@ export function UsersTable({ data, onDeactivateSelected }: UsersTableProps) {
           },
         ]}
       />
-      <div className="overflow-hidden rounded-md border">
+      <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

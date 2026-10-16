@@ -28,34 +28,38 @@ export default function SecurityPage() {
   }
 
   return (
-    <div className="max-w-md space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">امنیت</h1>
-        <p className="mt-1 text-sm text-muted-foreground">تغییر رمز عبور حساب</p>
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="border-b border-border px-4 py-3.5">
+        <h1 className="text-[15px] font-bold">امنیت و رمز عبور</h1>
+        <p className="mt-1 text-xs text-muted-foreground">رمز عبور حساب خود را تغییر دهید</p>
       </div>
-      <form className="space-y-4 rounded-xl border border-border p-4" onSubmit={onSubmit}>
-        <div>
+      <form className="max-w-lg space-y-4 p-4 sm:p-5" onSubmit={onSubmit}>
+        <div className="space-y-2">
           <Label htmlFor="current">رمز فعلی</Label>
           <Input
             id="current"
             type="password"
             required
+            className="h-10"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
           />
         </div>
-        <div>
+        <div className="space-y-2">
           <Label htmlFor="next">رمز جدید</Label>
           <Input
             id="next"
             type="password"
             required
-            minLength={6}
+            minLength={8}
+            className="h-10"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
           />
         </div>
-        <Button disabled={loading}>{loading ? "در حال ذخیره..." : "تغییر رمز"}</Button>
+        <Button type="submit" className="h-10" disabled={loading}>
+          {loading ? "در حال ذخیره..." : "تغییر رمز"}
+        </Button>
       </form>
     </div>
   );

@@ -1,8 +1,14 @@
+using System.Security.Claims;
 using ApolloShop.Application.Abstractions;
 
 namespace ApolloShop.Api.Middleware;
 
-/// <summary>Rejects authenticated requests whose tenant_id claim does not match the resolved tenant.</summary>
+/// <summary>
+/// When a JWT belongs to a different tenant than the current host/header,
+/// treat the request as anonymous instead of hard-failing.
+/// This avoids blocking login/OTP and other AllowAnonymous flows when a stale
+/// cross-tenant token is still attached by the browser.
+/// </summary>
 public class TenantClaimValidationMiddleware
 {
     private readonly RequestDelegate _next;
@@ -14,18 +20,15 @@ public class TenantClaimValidationMiddleware
         if (tenantContext.IsResolved && context.User.Identity?.IsAuthenticated == true)
         {
             var claim = context.User.FindFirst(TenantClaimTypes.TenantId)?.Value;
-            if (claim is not null && (!Guid.TryParse(claim, out var claimTenantId) || claimTenantId != tenantContext.TenantId))
+            var mismatched = claim is null
+                || !Guid.TryParse(claim, out var claimTenantId)
+                || claimTenantId != tenantContext.TenantId;
+
+            if (mismatched)
             {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                context.Response.ContentType = "application/problem+json";
-                await context.Response.WriteAsJsonAsync(new
-                {
-                    status = StatusCodes.Status403Forbidden,
-                    title = "Forbidden",
-                    detail = "The access token does not belong to the current tenant.",
-                    instance = context.Request.Path.Value
-                });
-                return;
+                // Drop the principal so [AllowAnonymous] works and [Authorize] returns 401.
+                context.User = new ClaimsPrincipal(new ClaimsIdentity());
+                context.Items["TenantTokenMismatch"] = true;
             }
         }
 

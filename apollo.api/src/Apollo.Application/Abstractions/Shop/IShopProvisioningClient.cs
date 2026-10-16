@@ -21,6 +21,14 @@ public sealed record ShopSsoCodeResult(
     string Code,
     DateTime ExpiresAtUtc);
 
+public sealed record ShopTenantStatusResult(
+    Guid TenantId,
+    string Slug,
+    string Name,
+    string? CustomDomain,
+    bool IsActive,
+    DateTime CreatedAtUtc);
+
 public interface IShopProvisioningClient
 {
     /// <exception cref="Apollo.Application.Common.Exceptions.ShopProvisioningException">Shop API rejected or was unreachable.</exception>
@@ -32,6 +40,18 @@ public interface IShopProvisioningClient
     Task<ShopSsoCodeResult> CreateSsoCodeAsync(
         string slug,
         string email,
+        CancellationToken cancellationToken = default);
+
+    /// <exception cref="Apollo.Application.Common.Exceptions.ShopProvisioningException">Shop API rejected or was unreachable.</exception>
+    Task<ShopTenantStatusResult> SetTenantActiveAsync(
+        string slug,
+        bool isActive,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes the shop tenant and all of its data. Idempotent if the tenant is already gone.</summary>
+    /// <exception cref="Apollo.Application.Common.Exceptions.ShopProvisioningException">Shop API rejected or was unreachable.</exception>
+    Task DeleteTenantAsync(
+        string slug,
         CancellationToken cancellationToken = default);
 
     /// <summary>Builds the public storefront URL for a tenant slug.</summary>

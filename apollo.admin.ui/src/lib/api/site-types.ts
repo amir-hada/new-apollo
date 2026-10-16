@@ -18,5 +18,6 @@ export type AdminSiteListItem = {
   adminUrl: string | null
   provisioningStatus: SiteProvisioningStatus
   provisioningError: string | null
+  isActive: boolean
   createdAtUtc: string
 }

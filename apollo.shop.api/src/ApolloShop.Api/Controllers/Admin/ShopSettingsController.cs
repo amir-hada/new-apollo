@@ -37,4 +37,10 @@ public class ShopSettingsController : ControllerBase
         [FromBody] UpdateHomeStoriesRequest request,
         CancellationToken cancellationToken) =>
         Ok(await _mediator.Send(new UpdateHomeStoriesCommand(request), cancellationToken));
+
+    [HttpPut("sms")]
+    public async Task<ActionResult<ShopSettingsDto>> UpdateSms(
+        [FromBody] UpdateShopSmsSettingsRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(await _mediator.Send(new UpdateShopSmsSettingsCommand(request), cancellationToken));
 }

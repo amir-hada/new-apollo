@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ErrorState } from "@/components/shared/States";
@@ -11,6 +12,7 @@ import type {
   Brand,
   CategoryTree,
   PagedResult,
+  ProductDetail,
   ProductListItem,
 } from "@/types/api";
 import { mapProductRow } from "./data";
@@ -21,6 +23,7 @@ import {
 import { ProductsTable } from "./products-table";
 
 export function AdminProducts() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
 
@@ -58,11 +61,14 @@ export function AdminProducts() {
 
   const create = useMutation({
     mutationFn: async (payload: CreateProductPayload) =>
-      (await api.post("/api/admin/products", payload)).data,
-    onSuccess: () => {
+      (await api.post<ProductDetail>("/api/admin/products", payload)).data,
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
-      toast.success("محصول ایجاد شد");
+      toast.success("محصول ایجاد شد — می‌توانید ویژگی‌ها را کامل کنید");
       setAddOpen(false);
+      if (created?.id) {
+        router.push(`/admin/products/${created.id}`);
+      }
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });

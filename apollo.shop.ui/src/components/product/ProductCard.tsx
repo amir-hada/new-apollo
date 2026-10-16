@@ -55,8 +55,8 @@ export function ProductCard({ product, className }: ProductCardProps) {
         ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col gap-0.5 px-2.5 pb-3 pt-1.5 sm:px-3 sm:pb-3.5">
-        <h3 className="line-clamp-2 text-[12px] font-semibold leading-5 text-foreground sm:text-[13px] sm:leading-[1.35]">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-2.5 pb-3 pt-1.5 sm:px-3 sm:pb-3.5">
+        <h3 className="line-clamp-2 min-w-0 text-[11px] font-semibold leading-5 text-foreground sm:text-[13px] sm:leading-[1.35]">
           {product.name}
         </h3>
 
@@ -66,13 +66,13 @@ export function ProductCard({ product, className }: ProductCardProps) {
           </p>
         ) : null}
 
-        <div className="mt-auto space-y-0.5 pt-1">
+        <div className="mt-auto min-w-0 space-y-0.5 pt-1">
           {discountPercent != null && original != null ? (
-            <div className="flex items-center justify-end gap-1.5">
-              <span className="text-[11px] text-muted-foreground line-through decoration-muted-foreground/70 sm:text-xs">
+            <div className="flex min-w-0 items-center justify-end gap-1.5">
+              <span className="truncate text-[11px] tabular-nums text-muted-foreground line-through decoration-muted-foreground/70 sm:text-xs">
                 {formatAmountFa(original, currency)}
               </span>
-              <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground sm:text-[11px]">
+              <span className="inline-flex min-w-7 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground sm:min-w-8 sm:text-[11px]">
                 {toPersianDigits(String(discountPercent))}٪
               </span>
             </div>
@@ -80,14 +80,14 @@ export function ProductCard({ product, className }: ProductCardProps) {
 
           <div
             className={cn(
-              "flex items-baseline justify-end gap-1",
+              "flex min-w-0 items-baseline justify-end gap-1",
               unavailable && "opacity-50",
             )}
           >
-            <span className="text-[15px] font-bold tracking-tight text-foreground sm:text-base">
+            <span className="truncate text-[14px] font-bold tracking-tight tabular-nums text-foreground sm:text-base">
               {formatAmountFa(current, currency)}
             </span>
-            <span className="text-[10px] text-muted-foreground sm:text-[11px]">
+            <span className="shrink-0 text-[10px] text-muted-foreground sm:text-[11px]">
               {currency}
             </span>
           </div>
@@ -112,12 +112,12 @@ export function ProductGrid({
     <div
       className={cn(
         "grid w-full gap-0 rounded-none bg-background",
-        "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
+        "grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6",
         /* لبهٔ بیرونی (آخرین ستون هر ردیف) بدون خط عمودی */
         "[&>*:nth-child(2n)]:border-e-0",
         "sm:[&>*:nth-child(2n)]:border-e sm:[&>*:nth-child(3n)]:border-e-0",
-        "md:[&>*:nth-child(3n)]:border-e md:[&>*:nth-child(4n)]:border-e-0",
-        "lg:[&>*:nth-child(4n)]:border-e lg:[&>*:nth-child(6n)]:border-e-0",
+        "md:[&>*:nth-child(3n)]:border-e-0",
+        "lg:[&>*:nth-child(3n)]:border-e lg:[&>*:nth-child(6n)]:border-e-0",
         className,
       )}
     >

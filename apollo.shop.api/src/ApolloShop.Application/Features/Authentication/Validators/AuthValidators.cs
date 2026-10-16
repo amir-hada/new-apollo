@@ -25,7 +25,9 @@ public class VerifyPhoneOtpCommandValidator : AbstractValidator<VerifyPhoneOtpCo
 
         RuleFor(x => x.Code)
             .NotEmpty()
+            .WithMessage("کد تأیید را وارد کنید.")
             .Length(5)
+            .WithMessage("کد تأیید باید ۵ رقم باشد.")
             .Matches(@"^\d{5}$")
             .WithMessage("کد تأیید باید ۵ رقم باشد.");
     }

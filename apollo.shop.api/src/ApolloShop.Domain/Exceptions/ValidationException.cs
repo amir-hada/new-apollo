@@ -2,16 +2,18 @@ namespace ApolloShop.Domain.Exceptions;
 
 public class ValidationException : DomainException
 {
+    private const string DefaultMessage = "خطای اعتبارسنجی رخ داد.";
+
     public IDictionary<string, string[]> Errors { get; }
 
     public ValidationException()
-        : base("One or more validation failures have occurred.")
+        : base(DefaultMessage)
     {
         Errors = new Dictionary<string, string[]>();
     }
 
     public ValidationException(IDictionary<string, string[]> errors)
-        : base("One or more validation failures have occurred.")
+        : base(FirstErrorMessage(errors) ?? DefaultMessage)
     {
         Errors = errors;
     }
@@ -23,11 +25,14 @@ public class ValidationException : DomainException
     }
 
     public ValidationException(string propertyName, string error)
-        : base("One or more validation failures have occurred.")
+        : base(error)
     {
         Errors = new Dictionary<string, string[]>
         {
             [propertyName] = [error]
         };
     }
+
+    private static string? FirstErrorMessage(IDictionary<string, string[]> errors) =>
+        errors.Values.SelectMany(messages => messages).FirstOrDefault(message => !string.IsNullOrWhiteSpace(message));
 }

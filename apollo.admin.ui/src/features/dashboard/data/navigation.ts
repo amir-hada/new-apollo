@@ -3,6 +3,7 @@ import {
   HeadphonesIcon,
   LayersIcon,
   LayoutDashboardIcon,
+  MessageSquareTextIcon,
   SettingsIcon,
   UsersIcon,
   type LucideIcon,
@@ -47,6 +48,12 @@ export const dashboardNavItems: DashboardNavItem[] = [
     description: "ارتباط با پشتیبانی",
   },
   {
+    title: "پنل پیامکی",
+    href: "/dashboard/sms-panel",
+    icon: MessageSquareTextIcon,
+    description: "تنظیمات مشترک SMS.ir",
+  },
+  {
     title: "تنظیمات",
     href: "/dashboard/settings",
     icon: SettingsIcon,
@@ -60,6 +67,7 @@ export const dashboardPageTitles: Record<string, string> = {
   "/dashboard/plans": "پلن‌ها",
   "/dashboard/sites": "سایت‌ها",
   "/dashboard/support": "پشتیبانی",
+  "/dashboard/sms-panel": "پنل پیامکی",
   "/dashboard/settings": "تنظیمات",
 }
 

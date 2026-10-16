@@ -22,14 +22,30 @@ public static class DependencyInjection
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.SectionName));
         services.Configure<MinioOptions>(configuration.GetSection(MinioOptions.SectionName));
+        services.Configure<ApolloPlatformOptions>(configuration.GetSection(ApolloPlatformOptions.SectionName));
 
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, CurrentUserService>();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
-        services.AddScoped<ISmsSender, LoggingSmsSender>();
         services.AddScoped<IPaymentGateway, MockPaymentGateway>();
+
+        var apolloPlatform = configuration.GetSection(ApolloPlatformOptions.SectionName).Get<ApolloPlatformOptions>();
+        if (apolloPlatform is not null
+            && !string.IsNullOrWhiteSpace(apolloPlatform.BaseUrl)
+            && !string.IsNullOrWhiteSpace(apolloPlatform.ProvisioningKey))
+        {
+            services.AddHttpClient<ISmsSender, PlatformGatewaySmsSender>((_, client) =>
+            {
+                client.BaseAddress = new Uri(apolloPlatform.BaseUrl.TrimEnd('/') + "/");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+        }
+        else
+        {
+            services.AddScoped<ISmsSender, LoggingSmsSender>();
+        }
 
         var minio = configuration.GetSection(MinioOptions.SectionName).Get<MinioOptions>();
         if (minio is not null
@@ -51,6 +67,21 @@ public static class DependencyInjection
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrWhiteSpace(accessToken)
+                            && path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,

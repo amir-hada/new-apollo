@@ -35,6 +35,8 @@ public static class DatabaseSeeder
                 Description = "فروشگاه اینترنتی آپولو — خرید آنلاین با تجربه مدرن، سریع و حرفه‌ای.",
                 MetaDescription = "فروشگاه اینترنتی آپولو — خرید آنلاین با تجربه مدرن، سریع و حرفه‌ای.",
                 PrimaryColor = "#0f172a",
+                SmsOtpEnabled = true,
+                SmsOrderEnabled = true,
                 CreatedAtUtc = DateTime.UtcNow,
                 CreatedBy = "system"
             });

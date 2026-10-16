@@ -11,19 +11,21 @@ export function AuthGuard({ children, admin }: { children: React.ReactNode; admi
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAdmin = useAuthStore((s) => s.isAdmin);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!user) {
+    if (!isAuthenticated()) {
+      if (user) useAuthStore.getState().clearSession();
       router.replace(`/login?next=${encodeURIComponent(pathname)}`);
       return;
     }
     if (admin && !isAdmin()) {
       router.replace("/account");
     }
-  }, [admin, hydrated, isAdmin, pathname, router, user]);
+  }, [admin, hydrated, isAdmin, isAuthenticated, pathname, router, user]);
 
-  if (!hydrated || !user || (admin && !isAdmin())) {
+  if (!hydrated || !isAuthenticated() || (admin && !isAdmin())) {
     return (
       <div className="mx-auto max-w-6xl space-y-3 p-6">
         <Skeleton className="h-8 w-48" />

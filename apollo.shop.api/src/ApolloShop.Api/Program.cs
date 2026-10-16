@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using ApolloShop.Api.Hubs;
 using ApolloShop.Api.Middleware;
 using ApolloShop.Application;
 using ApolloShop.Application.Abstractions;
@@ -14,6 +15,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IChatRealtimePublisher, SignalRChatRealtimePublisher>();
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
@@ -85,6 +88,7 @@ app.UseAuthentication();
 app.UseMiddleware<TenantClaimValidationMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 using (var scope = app.Services.CreateScope())
 {

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ApolloShop.Application.Abstractions;
+using ApolloShop.Application.Features.Coupons;
 using ApolloShop.Application.Features.Orders.DTOs;
 using ApolloShop.Domain.Entities.Commerce;
 using ApolloShop.Domain.Enums;
@@ -9,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ApolloShop.Application.Features.Orders.Commands;
 
-public record CreateOrderCommand(Guid AddressId, string? Notes) : IRequest<OrderDetailDto>;
+public record CreateOrderCommand(Guid AddressId, string? Notes, string? CouponCode = null) : IRequest<OrderDetailDto>;
 
 public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, OrderDetailDto>
 {
@@ -122,6 +123,26 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
             }
         }
 
+        decimal discountAmount = 0;
+        Coupon? appliedCoupon = null;
+        var couponCode = CouponMapper.NormalizeCode(request.CouponCode);
+        if (!string.IsNullOrWhiteSpace(couponCode))
+        {
+            appliedCoupon = await _db.Coupons
+                .FirstOrDefaultAsync(c => c.Code == couponCode, cancellationToken)
+                ?? throw new ApolloShop.Domain.Exceptions.ValidationException("Coupon", "کد تخفیف معتبر نیست.");
+
+            CouponMapper.EnsureUsable(appliedCoupon, _clock.UtcNow);
+            discountAmount = CouponMapper.ComputeDiscount(appliedCoupon, subtotal);
+            appliedCoupon.UsedCount += 1;
+        }
+
+        var settings = await _db.ShopSettings.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+        var afterDiscount = Math.Max(0, subtotal - discountAmount);
+        var shippingAmount = ShippingCalculator.Calculate(settings, afterDiscount);
+        var taxAmount = 0m;
+        var grandTotal = afterDiscount + shippingAmount + taxAmount;
+
         var order = new Order
         {
             Id = Guid.NewGuid(),
@@ -129,10 +150,10 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
             UserId = userId,
             Status = OrderStatus.Pending,
             Subtotal = subtotal,
-            DiscountAmount = 0,
-            ShippingAmount = 0,
-            TaxAmount = 0,
-            GrandTotal = subtotal,
+            DiscountAmount = discountAmount,
+            ShippingAmount = shippingAmount,
+            TaxAmount = taxAmount,
+            GrandTotal = grandTotal,
             Currency = "IRR",
             ShippingAddressSnapshot = JsonSerializer.Serialize(new
             {

@@ -1,7 +1,13 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { XIcon } from "lucide-react";
+import {
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { ImagePlus, Loader2, Trash2, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,11 +20,20 @@ import {
 import { FloatingField } from "@/components/ui/floating-field";
 import { FloatingSelect } from "@/components/ui/floating-select";
 import { ProductSpecsEditor } from "@/features/admin/products/product-specs-editor";
-import { normalizeDigits, formatGroupedPersianDigits } from "@/features/auth/normalize-phone";
+import { normalizeDigits, formatGroupedPersianDigits, toPersianDigits } from "@/features/auth/normalize-phone";
 import type { CategoryRow } from "@/features/admin/categories/data";
+import { getApiErrorMessage } from "@/lib/api";
 import { priceToPersianWords } from "@/lib/persian-number-words";
+import { resolveProductImageUrl } from "@/lib/product-image";
+import { uploadShopAsset } from "@/lib/shop-settings-api";
+import { cn } from "@/lib/utils";
 import { useShopCurrency } from "@/providers/ShopCurrencyProvider";
-import type { Brand, CreateProductRequest, ProductSpec } from "@/types/api";
+import type {
+  Brand,
+  CreateProductRequest,
+  ProductImage,
+  ProductSpec,
+} from "@/types/api";
 
 export type CreateProductPayload = CreateProductRequest;
 
@@ -33,6 +48,14 @@ type ProductsAddDialogProps = {
 
 function slugFromName(name: string) {
   return name.trim().replace(/\s+/g, "-");
+}
+
+function normalizeImages(images: ProductImage[]): ProductImage[] {
+  return images.map((img, index) => ({
+    ...img,
+    sortOrder: index,
+    isPrimary: index === 0,
+  }));
 }
 
 const emptyForm = {
@@ -54,16 +77,108 @@ export function ProductsAddDialog({
   submitting = false,
 }: ProductsAddDialogProps) {
   const shopCurrency = useShopCurrency();
+  const primaryInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState(emptyForm);
   const [specs, setSpecs] = useState<ProductSpec[]>([]);
+  const [images, setImages] = useState<ProductImage[]>([]);
+  const [uploadingPrimary, setUploadingPrimary] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setForm(emptyForm);
     setSpecs([]);
+    setImages([]);
+    setUploadingPrimary(false);
+    setUploadingGallery(false);
     setError(null);
   }, [open]);
+
+  const primaryImage = images.find((img) => img.isPrimary) ?? images[0] ?? null;
+  const galleryImages = images.filter((img) => !img.isPrimary);
+
+  const uploadPrimaryImage = async (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("فقط فایل تصویری مجاز است");
+      return;
+    }
+    setUploadingPrimary(true);
+    try {
+      const result = await uploadShopAsset(file, "shop");
+      setImages((prev) => {
+        const gallery = prev.filter((img) => !img.isPrimary);
+        return normalizeImages([
+          {
+            id: null,
+            imagePath: result.url,
+            alternativeText: form.name.trim() || null,
+            sortOrder: 0,
+            isPrimary: true,
+            mediaKind: 0,
+          },
+          ...gallery,
+        ]);
+      });
+      toast.success("تصویر اصلی آپلود شد");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "آپلود تصویر ناموفق بود"));
+    } finally {
+      setUploadingPrimary(false);
+    }
+  };
+
+  const uploadGalleryImages = async (files: FileList | File[] | undefined) => {
+    if (!files) return;
+    const list = Array.from(files);
+    if (list.length === 0) return;
+
+    setUploadingGallery(true);
+    try {
+      const uploaded: ProductImage[] = [];
+      for (const file of list) {
+        if (!file.type.startsWith("image/")) {
+          toast.error(`فایل «${file.name}» تصویر نیست`);
+          continue;
+        }
+        const result = await uploadShopAsset(file, "shop");
+        uploaded.push({
+          id: null,
+          imagePath: result.url,
+          alternativeText: form.name.trim() || null,
+          sortOrder: 0,
+          isPrimary: false,
+          mediaKind: 0,
+        });
+      }
+      if (uploaded.length === 0) return;
+      setImages((prev) => normalizeImages([...prev, ...uploaded]));
+      toast.success(
+        uploaded.length === 1
+          ? "تصویر به گالری اضافه شد"
+          : `${toPersianDigits(String(uploaded.length))} تصویر به گالری اضافه شد`,
+      );
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "آپلود گالری ناموفق بود"));
+    } finally {
+      setUploadingGallery(false);
+    }
+  };
+
+  const removePrimaryImage = () => {
+    setImages((prev) => normalizeImages(prev.filter((img) => !img.isPrimary)));
+  };
+
+  const removeGalleryAt = (index: number) => {
+    setImages((prev) => {
+      const gallery = prev.filter((img) => !img.isPrimary);
+      const nextGallery = gallery.filter((_, i) => i !== index);
+      const primary = prev.filter((img) => img.isPrimary);
+      return normalizeImages([...primary, ...nextGallery]);
+    });
+  };
 
   const categoryOptions = useMemo(
     () => [
@@ -146,6 +261,11 @@ export function ProductsAddDialog({
       }))
       .filter((s) => s.name && s.values.length > 0);
 
+    const payloadImages = normalizeImages(images).map((img) => ({
+      ...img,
+      alternativeText: img.alternativeText || name,
+    }));
+
     await onSubmit({
       name,
       slug: slugFromName(name),
@@ -173,10 +293,12 @@ export function ProductsAddDialog({
       ogDescription: null,
       ogImageUrl: null,
       sku: null,
-      images: [],
+      images: payloadImages,
       specs: cleanedSpecs,
     });
   };
+
+  const busy = submitting || uploadingPrimary || uploadingGallery;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -206,6 +328,155 @@ export function ProductsAddDialog({
           onSubmit={handleSubmit}
         >
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                تصویر اصلی
+              </p>
+              <div
+                className={cn(
+                  "relative overflow-hidden rounded-xl ring-1 ring-inset ring-border",
+                  "aspect-[16/9] max-h-44 bg-gradient-to-br from-muted/80 via-muted/40 to-background",
+                  uploadingPrimary && "pointer-events-none opacity-70",
+                )}
+              >
+                {primaryImage ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={resolveProductImageUrl(primaryImage.imagePath)}
+                      alt={primaryImage.alternativeText || form.name || "محصول"}
+                      className="absolute inset-0 size-full object-cover"
+                    />
+                    <div className="absolute inset-x-0 top-0 z-10 flex justify-end gap-1.5 p-2">
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="secondary"
+                        className="size-8 rounded-full bg-white text-slate-900 shadow-sm hover:bg-white [&_svg]:text-slate-900"
+                        onClick={() => primaryInputRef.current?.click()}
+                        title="تعویض تصویر"
+                      >
+                        <ImagePlus className="size-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="destructive"
+                        className="size-8 rounded-full shadow-sm"
+                        onClick={removePrimaryImage}
+                        title="حذف تصویر"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-2 px-4 text-center"
+                    onClick={() => primaryInputRef.current?.click()}
+                  >
+                    <div className="flex size-11 items-center justify-center rounded-2xl bg-background/80 shadow-sm ring-1 ring-border">
+                      {uploadingPrimary ? (
+                        <Loader2 className="size-5 animate-spin text-primary" />
+                      ) : (
+                        <ImagePlus className="size-5 text-primary" />
+                      )}
+                    </div>
+                    <p className="text-sm font-medium">
+                      {uploadingPrimary
+                        ? "در حال آپلود..."
+                        : "افزودن تصویر اصلی"}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      PNG، JPG یا WEBP
+                    </p>
+                  </button>
+                )}
+                <input
+                  ref={primaryInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={busy}
+                  onChange={(e) => {
+                    void uploadPrimaryImage(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  گالری تصاویر
+                </p>
+                <span className="text-[11px] text-muted-foreground">
+                  {toPersianDigits(String(galleryImages.length))} تصویر
+                </span>
+              </div>
+
+              {galleryImages.length > 0 ? (
+                <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {galleryImages.map((item, index) => (
+                    <li
+                      key={`${item.imagePath}-${index}`}
+                      className="relative aspect-square overflow-hidden rounded-xl bg-muted ring-1 ring-border"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={resolveProductImageUrl(item.imagePath)}
+                        alt=""
+                        className="size-full object-cover"
+                      />
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="destructive"
+                        className="absolute end-1.5 top-1.5 size-7 rounded-full shadow-sm"
+                        onClick={() => removeGalleryAt(index)}
+                        title="حذف"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => galleryInputRef.current?.click()}
+                className={cn(
+                  "flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border px-3 py-3 text-sm text-muted-foreground transition hover:border-primary/40 hover:text-foreground",
+                  uploadingGallery && "opacity-70",
+                )}
+              >
+                {uploadingGallery ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <ImagePlus className="size-4" />
+                )}
+                {uploadingGallery
+                  ? "در حال آپلود گالری..."
+                  : "افزودن چند تصویر به گالری"}
+              </button>
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                disabled={busy}
+                onChange={(e) => {
+                  void uploadGalleryImages(e.target.files ?? undefined);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+
             <FloatingField
               label="نام"
               required
@@ -295,7 +566,7 @@ export function ProductsAddDialog({
             ) : null}
           </div>
 
-          <DialogFooter className="shrink-0 gap-2 border-t border-border px-4 py-3 sm:px-5">
+          <DialogFooter className="!mx-0 !mb-0 shrink-0 gap-2 rounded-none border-t border-border bg-transparent px-4 py-3 sm:flex-row sm:justify-end sm:px-5">
             <Button
               type="button"
               variant="outline"
@@ -307,7 +578,7 @@ export function ProductsAddDialog({
             <Button
               type="submit"
               className="h-10 rounded-lg px-5"
-              disabled={submitting}
+              disabled={busy}
             >
               {submitting ? "در حال ایجاد..." : "ایجاد"}
             </Button>

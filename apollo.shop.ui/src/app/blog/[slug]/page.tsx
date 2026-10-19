@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { serverFetch } from "@/lib/server-api";
 import { formatDate } from "@/lib/utils";
 import type { BlogPostDetail } from "@/types/api";
@@ -57,7 +58,7 @@ export default async function BlogPostPage({ params }: Props) {
       {post.featuredImageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={post.featuredImageUrl}
+          src={resolveProductImageUrl(post.featuredImageUrl)}
           alt={post.title}
           className="mt-6 aspect-[16/9] w-full rounded-xl object-cover"
         />

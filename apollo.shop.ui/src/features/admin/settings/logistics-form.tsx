@@ -1,52 +1,98 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { ChevronDownIcon } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  defaultSiteSettings,
-  loadSiteSettings,
-  saveSiteSettings,
-  type SiteSettings,
-} from "@/lib/site-settings";
-import { cn } from "@/lib/utils";
+import { api, getApiErrorMessage } from "@/lib/api";
+import { SHOP_SETTINGS_QUERY_KEY } from "@/lib/shop-settings-api";
+import type { ShopSettings } from "@/types/api";
 
 const fieldClass = "h-9 px-3 text-sm md:text-sm";
 const labelClass = "text-xs font-medium text-muted-foreground";
 const areaClass = "min-h-[4.5rem] resize-none px-3 py-2 text-sm";
 
-const shippingMethods = [
-  { value: "post", label: "پست پیشتاز / سفارشی" },
-  { value: "tipax", label: "تیپاکس" },
-  { value: "courier", label: "پیک شهری" },
-  { value: "freight", label: "باربری" },
-  { value: "pickup", label: "تحویل حضوری" },
-] as const;
+type LogisticsFormState = {
+  enabled: boolean;
+  flatRate: string;
+  freeShippingThreshold: string;
+  customerNote: string;
+};
+
+function toForm(settings?: ShopSettings | null): LogisticsFormState {
+  return {
+    enabled: settings?.shippingEnabled ?? true,
+    flatRate: String(settings?.flatShippingRate ?? 50000),
+    freeShippingThreshold:
+      settings?.freeShippingThreshold != null && settings.freeShippingThreshold > 0
+        ? String(settings.freeShippingThreshold)
+        : "",
+    customerNote: settings?.shippingCustomerNote ?? "",
+  };
+}
 
 export function LogisticsForm() {
-  const [form, setForm] = useState<SiteSettings["logistics"]>(
-    defaultSiteSettings.logistics,
-  );
-  const [ready, setReady] = useState(false);
+  const queryClient = useQueryClient();
+  const settings = useQuery({
+    queryKey: SHOP_SETTINGS_QUERY_KEY,
+    queryFn: async () => (await api.get<ShopSettings>("/api/shop-settings")).data,
+  });
+
+  const [form, setForm] = useState<LogisticsFormState>(toForm());
 
   useEffect(() => {
-    setForm(loadSiteSettings().logistics);
-    setReady(true);
-  }, []);
+    if (!settings.data) return;
+    setForm(toForm(settings.data));
+  }, [settings.data]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const flatRate = Number(form.flatRate.replace(/,/g, "")) || 0;
+      const thresholdRaw = form.freeShippingThreshold.trim();
+      const freeShippingThreshold =
+        thresholdRaw === "" ? null : Number(thresholdRaw.replace(/,/g, "")) || 0;
+
+      const { data } = await api.put<ShopSettings>("/api/admin/shop-settings/logistics", {
+        shippingEnabled: form.enabled,
+        flatShippingRate: flatRate,
+        freeShippingThreshold:
+          freeShippingThreshold != null && freeShippingThreshold > 0
+            ? freeShippingThreshold
+            : null,
+        shippingCustomerNote: form.customerNote.trim() || null,
+      });
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(SHOP_SETTINGS_QUERY_KEY, data);
+      toast.success("تنظیمات لجستیک ذخیره شد");
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  });
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    const current = loadSiteSettings();
-    saveSiteSettings({ ...current, logistics: form });
-    toast.success("تنظیمات لجستیک ذخیره شد");
+    save.mutate();
   }
 
-  if (!ready) return null;
+  if (settings.isLoading) {
+    return <p className="text-sm text-muted-foreground">در حال بارگذاری...</p>;
+  }
+
+  if (settings.isError) {
+    return (
+      <div className="text-sm text-destructive">
+        {getApiErrorMessage(settings.error)}
+        <Button className="mt-3" variant="outline" onClick={() => settings.refetch()}>
+          تلاش مجدد
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <form className="space-y-3" onSubmit={onSubmit}>
@@ -56,43 +102,6 @@ export function LogisticsForm() {
           <Switch
             checked={form.enabled}
             onCheckedChange={(v) => setForm((f) => ({ ...f, enabled: !!v }))}
-          />
-        </div>
-
-        <div className="space-y-1">
-          <Label htmlFor="shipping-method" className={labelClass}>
-            روش ارسال پیش‌فرض
-          </Label>
-          <div className="relative">
-            <select
-              id="shipping-method"
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "h-9 w-full appearance-none font-normal",
-                "dark:bg-background dark:hover:bg-background",
-              )}
-              value={form.defaultMethod}
-              disabled={!form.enabled}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, defaultMethod: e.target.value }))
-              }
-            >
-              {shippingMethods.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDownIcon className="pointer-events-none absolute inset-e-3 top-2 size-4 opacity-50" />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-2.5 py-2">
-          <Label className="mb-0 text-sm font-normal">پرداخت در محل (COD)</Label>
-          <Switch
-            checked={form.codEnabled}
-            disabled={!form.enabled}
-            onCheckedChange={(v) => setForm((f) => ({ ...f, codEnabled: !!v }))}
           />
         </div>
 
@@ -107,9 +116,7 @@ export function LogisticsForm() {
             inputMode="numeric"
             disabled={!form.enabled}
             value={form.flatRate}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, flatRate: e.target.value }))
-            }
+            onChange={(e) => setForm((f) => ({ ...f, flatRate: e.target.value }))}
             placeholder="50000"
           />
         </div>
@@ -131,91 +138,7 @@ export function LogisticsForm() {
                 freeShippingThreshold: e.target.value,
               }))
             }
-            placeholder="500000"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <Label htmlFor="cod-fee" className={labelClass}>
-            کارمزد پرداخت در محل (تومان)
-          </Label>
-          <Input
-            id="cod-fee"
-            className={fieldClass}
-            dir="ltr"
-            inputMode="numeric"
-            disabled={!form.enabled || !form.codEnabled}
-            value={form.codFee}
-            onChange={(e) => setForm((f) => ({ ...f, codFee: e.target.value }))}
-            placeholder="0"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <Label htmlFor="days-min" className={labelClass}>
-            حداقل روز تحویل
-          </Label>
-          <Input
-            id="days-min"
-            className={fieldClass}
-            dir="ltr"
-            inputMode="numeric"
-            disabled={!form.enabled}
-            value={form.estimatedDaysMin}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, estimatedDaysMin: e.target.value }))
-            }
-            placeholder="2"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <Label htmlFor="days-max" className={labelClass}>
-            حداکثر روز تحویل
-          </Label>
-          <Input
-            id="days-max"
-            className={fieldClass}
-            dir="ltr"
-            inputMode="numeric"
-            disabled={!form.enabled}
-            value={form.estimatedDaysMax}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, estimatedDaysMax: e.target.value }))
-            }
-            placeholder="5"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <Label htmlFor="origin-province" className={labelClass}>
-            استان مبدأ ارسال
-          </Label>
-          <Input
-            id="origin-province"
-            className={fieldClass}
-            disabled={!form.enabled}
-            value={form.originProvince}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, originProvince: e.target.value }))
-            }
-            placeholder="تهران"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <Label htmlFor="origin-city" className={labelClass}>
-            شهر مبدأ ارسال
-          </Label>
-          <Input
-            id="origin-city"
-            className={fieldClass}
-            disabled={!form.enabled}
-            value={form.originCity}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, originCity: e.target.value }))
-            }
-            placeholder="تهران"
+            placeholder="500000 — خالی = بدون آستانه"
           />
         </div>
 
@@ -235,28 +158,11 @@ export function LogisticsForm() {
             placeholder="مثلاً: ارسال رایگان برای خرید بالای ۵۰۰ هزار تومان"
           />
         </div>
-
-        <div className="space-y-1 sm:col-span-2 lg:col-span-3">
-          <Label htmlFor="shipping-policy" className={labelClass}>
-            سیاست مرجوعی / آسیب در ارسال
-          </Label>
-          <Textarea
-            id="shipping-policy"
-            rows={2}
-            className={areaClass}
-            disabled={!form.enabled}
-            value={form.returnPolicy}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, returnPolicy: e.target.value }))
-            }
-            placeholder="شرایط مرجوعی کالا در صورت آسیب هنگام حمل"
-          />
-        </div>
       </div>
 
       <div className="flex justify-end pt-0.5">
-        <Button type="submit" className="h-10 px-5">
-          ذخیره تغییرات
+        <Button type="submit" className="h-10 px-5" disabled={save.isPending}>
+          {save.isPending ? "در حال ذخیره..." : "ذخیره تغییرات"}
         </Button>
       </div>
     </form>

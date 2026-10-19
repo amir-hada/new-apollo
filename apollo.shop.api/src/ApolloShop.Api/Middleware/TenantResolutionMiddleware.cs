@@ -42,9 +42,11 @@ public partial class TenantResolutionMiddleware
 
         var path = request.Path;
         // Internal platform endpoints address tenants explicitly (slug / one-time code), not by request host.
+        // Static media is public and must not require a tenant host/header (img tags cannot send X-Tenant-Slug).
         return path.StartsWithSegments("/swagger")
             || path.StartsWithSegments("/health")
-            || path.StartsWithSegments("/api/internal");
+            || path.StartsWithSegments("/api/internal")
+            || path.StartsWithSegments("/media");
     }
 
     private async Task<ResolvedTenant> ResolveTenantAsync(HttpContext context, IApplicationDbContext db)

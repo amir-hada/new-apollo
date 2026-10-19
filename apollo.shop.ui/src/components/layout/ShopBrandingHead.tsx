@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import { applyShopPrimaryColor } from "@/lib/shop-primary-color";
 import { useShopSettings } from "@/lib/shop-settings-api";
 
 /** Applies favicon and primary brand color from shop settings. */
 export function ShopBrandingHead() {
   const { data } = useShopSettings();
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     if (!data) return;
 
-    applyShopPrimaryColor(data.primaryColor);
+    applyShopPrimaryColor(data.primaryColor, resolvedTheme === "dark");
 
     const href = data.favIconUrl;
     let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
@@ -30,7 +31,7 @@ export function ShopBrandingHead() {
       document.head.appendChild(link);
     }
     link.href = href;
-  }, [data]);
+  }, [data, resolvedTheme]);
 
   return null;
 }

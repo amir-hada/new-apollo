@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { FloatingField } from "@/components/ui/floating-field";
 import { getApiErrorMessage } from "@/lib/api";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { uploadShopAsset } from "@/lib/shop-settings-api";
 import { cn } from "@/lib/utils";
 import type { UpsertBrandRequest } from "@/types/api";
@@ -152,7 +153,7 @@ export function BrandsAddDialog({
               {form.imagePath ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={form.imagePath}
+                  src={resolveProductImageUrl(form.imagePath)}
                   alt=""
                   className="size-full object-cover"
                 />

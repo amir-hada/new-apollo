@@ -40,4 +40,19 @@ public class ShopSettings : AuditableEntity, ITenantScoped
 
     /// <summary>When true, an SMS is sent to the customer after placing an order.</summary>
     public bool SmsOrderEnabled { get; set; } = true;
+
+    /// <summary>When true, flat shipping fee is applied to orders (unless free-shipping threshold is met).</summary>
+    public bool ShippingEnabled { get; set; } = true;
+
+    /// <summary>Fixed shipping fee in shop currency units (e.g. toman).</summary>
+    public decimal FlatShippingRate { get; set; } = 50_000m;
+
+    /// <summary>
+    /// Subtotal (after discount) at or above which shipping is free.
+    /// Null or zero means free-shipping threshold is disabled.
+    /// </summary>
+    public decimal? FreeShippingThreshold { get; set; } = 500_000m;
+
+    /// <summary>Optional note shown to customers about shipping.</summary>
+    public string? ShippingCustomerNote { get; set; }
 }

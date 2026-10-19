@@ -43,4 +43,10 @@ public class ShopSettingsController : ControllerBase
         [FromBody] UpdateShopSmsSettingsRequest request,
         CancellationToken cancellationToken) =>
         Ok(await _mediator.Send(new UpdateShopSmsSettingsCommand(request), cancellationToken));
+
+    [HttpPut("logistics")]
+    public async Task<ActionResult<ShopSettingsDto>> UpdateLogistics(
+        [FromBody] UpdateShopLogisticsSettingsRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(await _mediator.Send(new UpdateShopLogisticsSettingsCommand(request), cancellationToken));
 }

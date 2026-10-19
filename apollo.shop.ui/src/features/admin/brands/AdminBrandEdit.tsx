@@ -240,7 +240,7 @@ export function AdminBrandEdit() {
               {form.imagePath ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={form.imagePath}
+                  src={resolveProductImageUrl(form.imagePath)}
                   alt=""
                   className="size-full object-cover"
                 />

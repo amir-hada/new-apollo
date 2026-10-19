@@ -251,7 +251,7 @@ export function AdminSettings() {
                     : "border-transparent text-muted-foreground hover:bg-primary/8 hover:text-foreground dark:hover:bg-primary/12",
                 )}
               >
-                <Icon className="size-4 shrink-0 text-primary" />
+                <Icon className="size-4 shrink-0 text-foreground" />
                 {item.title}
               </button>
             );

@@ -6,6 +6,7 @@ import { ErrorState } from "@/components/shared/States";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, getApiErrorMessage } from "@/lib/api";
+import { formatShippingAddress } from "@/lib/format-shipping-address";
 import { orderStatusLabel } from "@/lib/labels";
 import { formatDate, formatPrice } from "@/lib/utils";
 import type { OrderDetail } from "@/types/api";
@@ -35,9 +36,12 @@ export default function AccountOrderDetailPage({ params }: { params: Promise<{ i
           <p>
             <span className="text-muted-foreground">پرداخت:</span> {formatDate(o.paidAtUtc)}
           </p>
-          <p>
-            <span className="text-muted-foreground">آدرس:</span> {o.shippingAddressSnapshot}
-          </p>
+          <div>
+            <span className="text-muted-foreground">آدرس:</span>
+            <p className="mt-1 whitespace-pre-line leading-7">
+              {formatShippingAddress(o.shippingAddressSnapshot)}
+            </p>
+          </div>
           {o.notes && (
             <p>
               <span className="text-muted-foreground">یادداشت:</span> {o.notes}

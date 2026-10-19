@@ -37,6 +37,9 @@ public static class DatabaseSeeder
                 PrimaryColor = "#0f172a",
                 SmsOtpEnabled = true,
                 SmsOrderEnabled = true,
+                ShippingEnabled = true,
+                FlatShippingRate = 50_000m,
+                FreeShippingThreshold = 500_000m,
                 CreatedAtUtc = DateTime.UtcNow,
                 CreatedBy = "system"
             });

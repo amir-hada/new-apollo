@@ -54,12 +54,55 @@ export function contrastForeground(hex: string): string {
   return luminance(hex) > 0.45 ? "#0f172a" : "#f8fafc";
 }
 
+function toHexChannel(value: number): string {
+  return Math.max(0, Math.min(255, Math.round(value)))
+    .toString(16)
+    .padStart(2, "0");
+}
+
+/** Mix a hex color toward white so dark brand colors stay visible on dark UI. */
+function mixWithWhite(hex: string, whiteAmount: number): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const t = Math.max(0, Math.min(1, whiteAmount));
+  return `#${toHexChannel(rgb.r + (255 - rgb.r) * t)}${toHexChannel(rgb.g + (255 - rgb.g) * t)}${toHexChannel(rgb.b + (255 - rgb.b) * t)}`;
+}
+
+/**
+ * Brand primary can be very dark (default slate-900). In dark mode that makes
+ * sidebar/action icons using `text-primary` disappear — lighten until readable.
+ */
+export function resolvePrimaryForTheme(
+  color: string | null | undefined,
+  isDark: boolean,
+): string {
+  const primary = normalizeHexColor(color) || DEFAULT_SHOP_PRIMARY;
+  if (!isDark || luminance(primary) >= 0.42) return primary;
+
+  let amount = 0.4;
+  let resolved = mixWithWhite(primary, amount);
+  while (luminance(resolved) < 0.48 && amount < 0.85) {
+    amount += 0.08;
+    resolved = mixWithWhite(primary, amount);
+  }
+  return resolved;
+}
+
+export function isDocumentDarkMode(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.documentElement.classList.contains("dark");
+}
+
 export const SHOP_PRIMARY_STYLE_ID = "shop-primary-vars";
 
-export function applyShopPrimaryColor(color: string | null | undefined) {
+export function applyShopPrimaryColor(
+  color: string | null | undefined,
+  isDark?: boolean,
+) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  const primary = normalizeHexColor(color) || DEFAULT_SHOP_PRIMARY;
+  const dark = isDark ?? isDocumentDarkMode();
+  const primary = resolvePrimaryForTheme(color, dark);
   const foreground = contrastForeground(primary);
 
   // Prefer inline CSS variables on <html> (set by RootLayout) so we avoid a
@@ -69,7 +112,7 @@ export function applyShopPrimaryColor(color: string | null | undefined) {
   root.style.setProperty("--sidebar-primary", primary);
   root.style.setProperty("--sidebar-primary-foreground", foreground);
   root.style.setProperty("--ring", primary);
-  root.dataset.shopPrimary = primary;
+  root.dataset.shopPrimary = normalizeHexColor(color) || DEFAULT_SHOP_PRIMARY;
 
   // Clean up any leftover SSR/client style tag from older builds.
   document.getElementById(SHOP_PRIMARY_STYLE_ID)?.remove();
@@ -78,7 +121,8 @@ export function applyShopPrimaryColor(color: string | null | undefined) {
 export function shopPrimaryCssVars(
   color: string | null | undefined,
 ): Record<string, string> {
-  const primary = normalizeHexColor(color) || DEFAULT_SHOP_PRIMARY;
+  // SSR defaults to light; client re-applies for dark via ShopBrandingHead.
+  const primary = resolvePrimaryForTheme(color, false);
   const foreground = contrastForeground(primary);
   return {
     "--primary": primary,

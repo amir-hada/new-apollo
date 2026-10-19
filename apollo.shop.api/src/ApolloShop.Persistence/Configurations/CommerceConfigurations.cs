@@ -172,6 +172,7 @@ public class CouponConfiguration : IEntityTypeConfiguration<Coupon>
         builder.Property(x => x.Code).HasMaxLength(50).IsRequired();
         builder.Property(x => x.PercentOff).HasPrecision(5, 2);
         builder.Property(x => x.AmountOff).HasPrecision(18, 2);
+        builder.Property(x => x.UsedCount).HasDefaultValue(0);
 
         builder.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
     }

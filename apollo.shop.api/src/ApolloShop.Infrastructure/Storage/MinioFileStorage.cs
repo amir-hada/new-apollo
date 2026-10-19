@@ -1,4 +1,5 @@
 using Amazon;
+using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using ApolloShop.Application.Abstractions;
@@ -27,7 +28,10 @@ public sealed class MinioFileStorage : IFileStorage
             AuthenticationRegion = "us-east-1",
             RegionEndpoint = RegionEndpoint.USEast1,
             ServiceURL = $"{scheme}://{_options.Endpoint}",
-            ForcePathStyle = true
+            ForcePathStyle = true,
+            UseHttp = !_options.UseSsl,
+            RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED,
+            ResponseChecksumValidation = ResponseChecksumValidation.WHEN_REQUIRED,
         };
 
         _client = new AmazonS3Client(_options.AccessKey, _options.SecretKey, config);

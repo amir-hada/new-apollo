@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { api, getApiErrorMessage } from "@/lib/api";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { formatDate } from "@/lib/utils";
 import { useSiteSettings } from "@/lib/use-site-settings";
 import type { BlogPostListItem, PagedResult } from "@/types/api";
@@ -75,7 +76,11 @@ export default function BlogPage() {
                 <div className="aspect-[16/9] bg-muted">
                   {post.featuredImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={post.featuredImageUrl} alt={post.title} className="h-full w-full object-cover" />
+                    <img
+                      src={resolveProductImageUrl(post.featuredImageUrl)}
+                      alt={post.title}
+                      className="h-full w-full object-cover"
+                    />
                   ) : null}
                 </div>
                 <div className="space-y-2 p-4">

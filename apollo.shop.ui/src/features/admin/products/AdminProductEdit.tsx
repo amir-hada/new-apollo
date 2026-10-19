@@ -44,6 +44,7 @@ import { ProductSpecsEditor } from "@/features/admin/products/product-specs-edit
 import { normalizeDigits, toPersianDigits, formatGroupedPersianDigits } from "@/features/auth/normalize-phone";
 import { api, getApiErrorMessage } from "@/lib/api";
 import { priceToPersianWords } from "@/lib/persian-number-words";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { uploadShopAsset } from "@/lib/shop-settings-api";
 import { cn } from "@/lib/utils";
 import { useShopCurrency } from "@/providers/ShopCurrencyProvider";
@@ -893,7 +894,7 @@ export function AdminProductEdit() {
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={primaryImage.imagePath}
+                        src={resolveProductImageUrl(primaryImage.imagePath)}
                         alt={primaryImage.alternativeText ?? form.name}
                         className="absolute inset-0 size-full object-cover"
                       />
@@ -1062,7 +1063,7 @@ export function AdminProductEdit() {
                             ) : (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
-                                src={item.imagePath}
+                                src={resolveProductImageUrl(item.imagePath)}
                                 alt=""
                                 className="pointer-events-none size-full object-cover"
                               />

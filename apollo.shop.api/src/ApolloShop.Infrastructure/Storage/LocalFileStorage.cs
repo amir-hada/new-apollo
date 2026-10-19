@@ -25,11 +25,7 @@ public class LocalFileStorage : IFileStorage
     {
         _ = contentType;
         var safeName = $"{Guid.NewGuid():N}_{Path.GetFileName(fileName)}";
-        var relativeFolder = Path.Combine(_options.RootPath.Replace("wwwroot/", string.Empty), folder);
-        var absoluteFolder = Path.Combine(
-            _environment.ContentRootPath,
-            "wwwroot",
-            relativeFolder.Replace('\\', '/').TrimStart('/'));
+        var absoluteFolder = Path.Combine(GetMediaRoot(), folder.Trim().Trim('/', '\\'));
         Directory.CreateDirectory(absoluteFolder);
 
         var absolutePath = Path.Combine(absoluteFolder, safeName);
@@ -47,12 +43,34 @@ public class LocalFileStorage : IFileStorage
         }
 
         var trimmed = pathOrUrl.TrimStart('/').Replace("media/", string.Empty, StringComparison.OrdinalIgnoreCase);
-        var absolutePath = Path.Combine(_environment.ContentRootPath, "wwwroot", "media", trimmed);
+        var absolutePath = Path.Combine(GetMediaRoot(), trimmed.Replace('/', Path.DirectorySeparatorChar));
         if (File.Exists(absolutePath))
         {
             File.Delete(absolutePath);
         }
 
         return Task.CompletedTask;
+    }
+
+    private string GetMediaRoot()
+    {
+        var webRoot = _environment.WebRootPath;
+        if (string.IsNullOrWhiteSpace(webRoot))
+        {
+            webRoot = Path.Combine(_environment.ContentRootPath, "wwwroot");
+        }
+
+        var mediaSegment = _options.RootPath
+            .Replace("wwwroot/", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("wwwroot\\", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Trim()
+            .Trim('/', '\\');
+
+        if (string.IsNullOrWhiteSpace(mediaSegment))
+        {
+            mediaSegment = "media";
+        }
+
+        return Path.Combine(webRoot, mediaSegment);
     }
 }

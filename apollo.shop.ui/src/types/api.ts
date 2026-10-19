@@ -688,6 +688,29 @@ export interface ShopSettings {
   homeStories?: HomeStory[];
   smsOtpEnabled?: boolean;
   smsOrderEnabled?: boolean;
+  shippingEnabled?: boolean;
+  flatShippingRate?: number;
+  freeShippingThreshold?: number | null;
+  shippingCustomerNote?: string | null;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  percentOff?: number | null;
+  amountOff?: number | null;
+  isActive: boolean;
+  startsAtUtc?: string | null;
+  endsAtUtc?: string | null;
+  maxUses?: number | null;
+  usedCount: number;
+}
+
+export interface ValidateCouponResult {
+  code: string;
+  discountAmount: number;
+  percentOff?: number | null;
+  amountOff?: number | null;
 }
 
 export interface UpdateShopSettingsRequest {

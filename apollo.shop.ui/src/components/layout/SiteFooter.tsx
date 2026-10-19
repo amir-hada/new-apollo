@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toPersianDigits } from "@/features/auth/normalize-phone";
 import { api } from "@/lib/api";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { useShopSettings } from "@/lib/shop-settings-api";
 import { useSiteSettings } from "@/lib/use-site-settings";
 import { cn } from "@/lib/utils";
@@ -130,7 +131,9 @@ export function SiteFooter() {
     "فروشگاه اینترنتی آپولو؛ خرید آنلاین ساده، سریع و قابل اعتماد با تمرکز بر کیفیت محصول و پشتیبانی واقعی.";
   const phone = shop?.supportPhone || footer.supportPhone;
   const email = shop?.supportEmail || footer.supportEmail;
-  const logoUrl = shop?.logoUrl;
+  const logoUrl = shop?.logoUrl
+    ? resolveProductImageUrl(shop.logoUrl)
+    : null;
 
   const posts = useQuery({
     queryKey: ["footer-latest-posts"],
@@ -270,7 +273,7 @@ export function SiteFooter() {
                       {post.featuredImageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={post.featuredImageUrl}
+                          src={resolveProductImageUrl(post.featuredImageUrl)}
                           alt=""
                           className="size-full object-cover transition group-hover:scale-[1.03]"
                         />

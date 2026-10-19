@@ -50,6 +50,9 @@ public class GetShopSettingsQueryHandler : IRequestHandler<GetShopSettingsQuery,
         PrimaryColor = "#0f172a",
         SmsOtpEnabled = true,
         SmsOrderEnabled = true,
+        ShippingEnabled = true,
+        FlatShippingRate = 50_000m,
+        FreeShippingThreshold = 500_000m,
         CreatedAtUtc = DateTime.UtcNow,
         CreatedBy = "system"
     };
@@ -71,5 +74,9 @@ public class GetShopSettingsQueryHandler : IRequestHandler<GetShopSettingsQuery,
         HeroBannerSerializer.Deserialize(s.HeroBannersJson),
         HomeStorySerializer.Deserialize(s.HomeStoriesJson),
         s.SmsOtpEnabled,
-        s.SmsOrderEnabled);
+        s.SmsOrderEnabled,
+        s.ShippingEnabled,
+        s.FlatShippingRate,
+        s.FreeShippingThreshold,
+        s.ShippingCustomerNote);
 }

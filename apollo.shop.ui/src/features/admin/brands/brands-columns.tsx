@@ -6,6 +6,7 @@ import { Award } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableColumnHeader } from "@/components/data-table";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import type { BrandRow } from "./data";
 import { BrandsRowActions } from "./brands-row-actions";
 
@@ -61,7 +62,7 @@ export function createBrandsColumns(
               {brand.imagePath ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={brand.imagePath}
+                  src={resolveProductImageUrl(brand.imagePath)}
                   alt=""
                   className="size-full object-contain"
                 />

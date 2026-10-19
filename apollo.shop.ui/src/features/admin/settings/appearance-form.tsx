@@ -71,7 +71,7 @@ export function AppearanceForm() {
         ...data,
         primaryColor: color,
       });
-      applyShopPrimaryColor(color);
+      applyShopPrimaryColor(color, selectedTheme === "dark");
       setTheme(selectedTheme);
       toast.success("ترجیحات ظاهر ذخیره شد");
     },
@@ -81,7 +81,7 @@ export function AppearanceForm() {
   function setPrimaryColor(value: string) {
     const normalized = normalizeHexColor(value) || DEFAULT_SHOP_PRIMARY;
     setPrimaryColorState(normalized);
-    applyShopPrimaryColor(normalized);
+    applyShopPrimaryColor(normalized, selectedTheme === "dark");
   }
 
   if (settings.isLoading) {

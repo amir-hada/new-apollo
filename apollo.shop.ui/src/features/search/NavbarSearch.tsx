@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { cn } from "@/lib/utils";
 import type { Brand, CategoryTree, SearchSuggestResult } from "@/types/api";
 import {
@@ -347,7 +348,7 @@ export function NavbarSearch({
                         {b.imagePath ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={b.imagePath}
+                            src={resolveProductImageUrl(b.imagePath)}
                             alt=""
                             className="size-4 shrink-0 rounded object-contain"
                           />

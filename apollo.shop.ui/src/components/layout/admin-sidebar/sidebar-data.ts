@@ -33,11 +33,6 @@ export const sidebarData: SidebarData = {
           icon: LayoutDashboard,
         },
         {
-          title: "قابلیت‌ها",
-          url: "/admin/apps",
-          icon: Package,
-        },
-        {
           title: "پشتیبانی",
           url: "/admin/chats",
           icon: MessagesSquare,

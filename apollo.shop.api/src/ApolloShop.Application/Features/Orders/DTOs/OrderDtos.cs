@@ -38,5 +38,5 @@ public record OrderDetailDto(
     string? CustomerEmail,
     IReadOnlyList<OrderItemDto> Items);
 
-public record CreateOrderRequest(Guid AddressId, string? Notes);
+public record CreateOrderRequest(Guid AddressId, string? Notes, string? CouponCode = null);
 public record UpdateOrderStatusRequest(OrderStatus Status);

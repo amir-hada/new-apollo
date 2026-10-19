@@ -30,7 +30,11 @@ public record ShopSettingsDto(
     IReadOnlyList<HeroBannerDto> HeroBanners,
     IReadOnlyList<HomeStoryDto> HomeStories,
     bool SmsOtpEnabled,
-    bool SmsOrderEnabled);
+    bool SmsOrderEnabled,
+    bool ShippingEnabled,
+    decimal FlatShippingRate,
+    decimal? FreeShippingThreshold,
+    string? ShippingCustomerNote);
 
 public record UpdateShopSettingsRequest(
     string ShopTitle,
@@ -49,6 +53,12 @@ public record UpdateShopSettingsRequest(
     bool? SmsOrderEnabled = null);
 
 public record UpdateShopSmsSettingsRequest(bool SmsOtpEnabled, bool SmsOrderEnabled);
+
+public record UpdateShopLogisticsSettingsRequest(
+    bool ShippingEnabled,
+    decimal FlatShippingRate,
+    decimal? FreeShippingThreshold,
+    string? ShippingCustomerNote);
 
 public record UpdateHeroBannersRequest(IReadOnlyList<HeroBannerDto> Banners);
 

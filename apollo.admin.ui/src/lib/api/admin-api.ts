@@ -13,6 +13,10 @@ import type {
   PlatformSmsSettings,
   UpdatePlatformSmsSettingsRequest,
 } from "./sms-settings-types"
+import type {
+  PagedSupportTickets,
+  SupportTicketDetail,
+} from "./support-ticket-types"
 
 function normalizeAdminUser(user: AdminUserListItem): AdminUserListItem {
   return {
@@ -147,5 +151,70 @@ export const adminApi = {
       body: JSON.stringify(request),
       auth: true,
     })
+  },
+
+  getSupportTickets(params: {
+    page?: number
+    pageSize?: number
+    status?: number | null
+    priority?: number | null
+    search?: string
+  } = {}) {
+    const query = new URLSearchParams()
+    query.set("page", String(params.page ?? 1))
+    query.set("pageSize", String(params.pageSize ?? 20))
+    if (params.status !== null && params.status !== undefined) {
+      query.set("status", String(params.status))
+    }
+    if (params.priority !== null && params.priority !== undefined) {
+      query.set("priority", String(params.priority))
+    }
+    if (params.search?.trim()) {
+      query.set("search", params.search.trim())
+    }
+    return apiRequest<PagedSupportTickets>(
+      `/api/admin/support/tickets?${query.toString()}`,
+      { auth: true }
+    )
+  },
+
+  getSupportTicket(ticketId: string) {
+    return apiRequest<SupportTicketDetail>(
+      `/api/admin/support/tickets/${ticketId}`,
+      { auth: true }
+    )
+  },
+
+  replySupportTicket(ticketId: string, message: string) {
+    return apiRequest<SupportTicketDetail>(
+      `/api/admin/support/tickets/${ticketId}/replies`,
+      {
+        method: "POST",
+        body: JSON.stringify({ message }),
+        auth: true,
+      }
+    )
+  },
+
+  updateSupportTicketStatus(ticketId: string, status: number) {
+    return apiRequest<SupportTicketDetail>(
+      `/api/admin/support/tickets/${ticketId}/status`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+        auth: true,
+      }
+    )
+  },
+
+  updateSupportTicketPriority(ticketId: string, priority: number) {
+    return apiRequest<SupportTicketDetail>(
+      `/api/admin/support/tickets/${ticketId}/priority`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ priority }),
+        auth: true,
+      }
+    )
   },
 }

@@ -10,11 +10,16 @@ import {
 } from "@/lib/signalr/notifications-hub"
 import { useAuth } from "@/features/auth"
 
+type MarkAllAsReadOptions = {
+  /** When false, badge clears but list stays until caller clears it (e.g. dropdown close). */
+  clearList?: boolean
+}
+
 type NotificationContextValue = {
   unreadNotifications: AppNotification[]
   unreadCount: number
   isLoading: boolean
-  markAllAsRead: () => Promise<void>
+  markAllAsRead: (options?: MarkAllAsReadOptions) => Promise<void>
   refreshUnread: () => Promise<void>
 }
 
@@ -78,16 +83,23 @@ export function NotificationProvider({
     }
   }, [isAuthenticated])
 
-  const markAllAsRead = React.useCallback(async () => {
-    if (!isAuthenticated) {
-      return
-    }
+  const markAllAsRead = React.useCallback(
+    async (options?: MarkAllAsReadOptions) => {
+      if (!isAuthenticated) {
+        return
+      }
 
-    setUnreadCount(0)
-    setUnreadNotifications([])
+      const clearList = options?.clearList !== false
 
-    await notificationsApi.markAllAsRead()
-  }, [isAuthenticated])
+      setUnreadCount(0)
+      if (clearList) {
+        setUnreadNotifications([])
+      }
+
+      await notificationsApi.markAllAsRead()
+    },
+    [isAuthenticated]
+  )
 
   React.useEffect(() => {
     if (!isAuthenticated) {

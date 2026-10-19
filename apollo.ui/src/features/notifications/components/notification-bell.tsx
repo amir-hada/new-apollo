@@ -35,14 +35,24 @@ export function NotificationBell() {
   const { unreadNotifications, unreadCount, isLoading, markAllAsRead } =
     useNotifications()
   const [open, setOpen] = React.useState(false)
+  // Keep a snapshot while the menu is open so marking-as-read does not empty the list instantly.
+  const [visibleNotifications, setVisibleNotifications] = React.useState(
+    unreadNotifications
+  )
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen)
 
     if (nextOpen) {
-      void markAllAsRead()
+      setVisibleNotifications(unreadNotifications)
+      void markAllAsRead({ clearList: false })
+      return
     }
+
+    setVisibleNotifications([])
   }
+
+  const itemsToShow = open ? visibleNotifications : unreadNotifications
 
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange}>
@@ -88,17 +98,17 @@ export function NotificationBell() {
         </div>
 
         <ScrollArea className="max-h-80">
-          {isLoading && unreadNotifications.length === 0 ? (
+          {isLoading && itemsToShow.length === 0 ? (
             <p className="px-3 py-6 text-center text-muted-foreground">
               در حال بارگذاری...
             </p>
-          ) : unreadNotifications.length === 0 ? (
+          ) : itemsToShow.length === 0 ? (
             <p className="px-3 py-6 text-center text-muted-foreground">
               اعلان جدیدی ندارید.
             </p>
           ) : (
             <ul className="divide-y divide-white/8">
-              {unreadNotifications.map((notification) => (
+              {itemsToShow.map((notification) => (
                 <li
                   key={notification.id}
                   className="bg-primary/5 px-3 py-3 transition-colors"

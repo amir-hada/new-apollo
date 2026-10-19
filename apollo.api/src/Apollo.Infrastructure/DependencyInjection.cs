@@ -6,6 +6,7 @@ using Apollo.Application.Abstractions.Platforms;
 using Apollo.Application.Abstractions.Shop;
 using Apollo.Application.Abstractions.Sms;
 using Apollo.Application.Abstractions.Storage;
+using Apollo.Application.Abstractions.Support;
 using Apollo.Infrastructure.Identity;
 using Apollo.Infrastructure.Notifications;
 using Apollo.Infrastructure.Options;
@@ -15,6 +16,7 @@ using Apollo.Infrastructure.Platforms;
 using Apollo.Infrastructure.Shop;
 using Apollo.Infrastructure.Sms;
 using Apollo.Infrastructure.Storage;
+using Apollo.Infrastructure.Support;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -118,6 +120,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IPlatformSmsSettingsService, PlatformSmsSettingsService>();
+        services.AddScoped<ISupportTicketService, SupportTicketService>();
         services.AddHttpClient<ISmsSender, SmsIrSender>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);

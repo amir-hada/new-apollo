@@ -12,6 +12,12 @@ using Apollo.Application.Features.Admin.Queries.GetPlanById;
 using Apollo.Application.Features.Admin.Queries.GetPlans;
 using Apollo.Application.Features.Admin.Queries.GetSites;
 using Apollo.Application.Features.Admin.Queries.GetUsers;
+using Apollo.Application.Abstractions.Support;
+using Apollo.Application.Features.Support.Commands.ReplySupportTicket;
+using Apollo.Application.Features.Support.Commands.UpdateSupportTicketPriority;
+using Apollo.Application.Features.Support.Commands.UpdateSupportTicketStatus;
+using Apollo.Application.Features.Support.Queries.GetAdminSupportTickets;
+using Apollo.Application.Features.Support.Queries.GetSupportTicketById;
 using Apollo.Application.Common.Models;
 using Apollo.Domain.Constants;
 using MediatR;
@@ -175,6 +181,73 @@ public sealed class AdminController : ControllerBase
     {
         await _sender.Send(new DeletePlanCommand(planId), cancellationToken);
         return Ok(new { message = "پلن با موفقیت حذف شد." });
+    }
+
+    [HttpGet("support/tickets")]
+    public async Task<IActionResult> GetSupportTickets(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] SupportTicketStatusDto? status = null,
+        [FromQuery] SupportTicketPriorityDto? priority = null,
+        [FromQuery] string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _sender.Send(
+            new GetAdminSupportTicketsQuery(page, pageSize, status, priority, search),
+            cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpGet("support/tickets/{ticketId:guid}")]
+    public async Task<IActionResult> GetSupportTicket(
+        Guid ticketId,
+        CancellationToken cancellationToken = default)
+    {
+        var ticket = await _sender.Send(
+            new GetSupportTicketByIdQuery(ticketId, null, AsAdmin: true),
+            cancellationToken);
+
+        return Ok(ticket);
+    }
+
+    [HttpPost("support/tickets/{ticketId:guid}/replies")]
+    public async Task<IActionResult> ReplySupportTicket(
+        Guid ticketId,
+        [FromBody] ReplySupportTicketRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var ticket = await _sender.Send(
+            new ReplySupportTicketCommand(GetUserId(), ticketId, request, AsStaff: true),
+            cancellationToken);
+
+        return Ok(ticket);
+    }
+
+    [HttpPatch("support/tickets/{ticketId:guid}/status")]
+    public async Task<IActionResult> UpdateSupportTicketStatus(
+        Guid ticketId,
+        [FromBody] UpdateSupportTicketStatusRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var ticket = await _sender.Send(
+            new UpdateSupportTicketStatusCommand(GetUserId(), ticketId, request),
+            cancellationToken);
+
+        return Ok(ticket);
+    }
+
+    [HttpPatch("support/tickets/{ticketId:guid}/priority")]
+    public async Task<IActionResult> UpdateSupportTicketPriority(
+        Guid ticketId,
+        [FromBody] UpdateSupportTicketPriorityRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var ticket = await _sender.Send(
+            new UpdateSupportTicketPriorityCommand(GetUserId(), ticketId, request),
+            cancellationToken);
+
+        return Ok(ticket);
     }
 
     [HttpGet("sms-settings")]

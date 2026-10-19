@@ -36,6 +36,10 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Id
 
     public DbSet<PlatformSmsSettings> PlatformSmsSettings => Set<PlatformSmsSettings>();
 
+    public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+
+    public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -48,6 +52,44 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Id
             entity.Property(item => item.OtpParameterName).HasMaxLength(64).IsRequired();
             entity.Property(item => item.OrderParameterName).HasMaxLength(64).IsRequired();
             entity.Property(item => item.OrderMessageTemplate).HasMaxLength(500).IsRequired();
+        });
+
+        builder.Entity<SupportTicket>(entity =>
+        {
+            entity.ToTable("SupportTickets");
+            entity.HasKey(ticket => ticket.Id);
+            entity.Property(ticket => ticket.Number).HasMaxLength(50).IsRequired();
+            entity.Property(ticket => ticket.Subject).HasMaxLength(250).IsRequired();
+            entity.Property(ticket => ticket.Message).HasMaxLength(5000).IsRequired();
+            entity.Property(ticket => ticket.Status).HasConversion<int>();
+            entity.Property(ticket => ticket.Priority).HasConversion<int>();
+            entity.HasIndex(ticket => ticket.Number).IsUnique();
+            entity.HasIndex(ticket => new { ticket.UserId, ticket.CreatedAtUtc });
+            entity.HasIndex(ticket => new { ticket.Status, ticket.UpdatedAtUtc });
+            entity.HasOne(ticket => ticket.User)
+                .WithMany()
+                .HasForeignKey(ticket => ticket.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(ticket => ticket.AssignedToAdmin)
+                .WithMany()
+                .HasForeignKey(ticket => ticket.AssignedToAdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(ticket => ticket.Messages)
+                .WithOne(message => message.Ticket)
+                .HasForeignKey(message => message.TicketId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<SupportTicketMessage>(entity =>
+        {
+            entity.ToTable("SupportTicketMessages");
+            entity.HasKey(message => message.Id);
+            entity.Property(message => message.Body).HasMaxLength(5000).IsRequired();
+            entity.HasIndex(message => new { message.TicketId, message.CreatedAtUtc });
+            entity.HasOne(message => message.Sender)
+                .WithMany()
+                .HasForeignKey(message => message.SenderUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<ApplicationUser>(entity =>

@@ -12,4 +12,5 @@ public class Coupon : Entity, ITenantScoped
     public DateTime? StartsAtUtc { get; set; }
     public DateTime? EndsAtUtc { get; set; }
     public int? MaxUses { get; set; }
+    public int UsedCount { get; set; }
 }

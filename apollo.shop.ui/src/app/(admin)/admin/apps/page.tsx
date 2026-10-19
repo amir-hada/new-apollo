@@ -1,7 +1,5 @@
-"use client";
-
-import { AdminApps } from "@/features/admin/apps/AdminApps";
+import { redirect } from "next/navigation";
 
 export default function AdminAppsPage() {
-  return <AdminApps />;
+  redirect("/admin");
 }

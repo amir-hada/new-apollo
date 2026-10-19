@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AmazingOffers } from "@/features/home/AmazingOffers";
 import { HomeProductCarousel } from "@/features/home/HomeProductCarousel";
 import { HomeStories } from "@/features/home/HomeStories";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { useShopSettings } from "@/lib/shop-settings-api";
 import { useSiteSettings } from "@/lib/use-site-settings";
 import { cn } from "@/lib/utils";
@@ -55,7 +56,7 @@ function HeroBannerSlider({ banners }: { banners: HeroBanner[] }) {
             const image = (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={banner.imageUrl}
+                src={resolveProductImageUrl(banner.imageUrl)}
                 alt=""
                 className="absolute inset-0 size-full object-cover object-center"
                 draggable={false}

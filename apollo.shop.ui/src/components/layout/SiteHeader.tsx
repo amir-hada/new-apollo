@@ -38,6 +38,7 @@ import { NavbarSearch } from "@/features/search/NavbarSearch";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { useCartStore } from "@/lib/cart-store";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { useSiteSettings } from "@/lib/use-site-settings";
 import { useShopSettings } from "@/lib/shop-settings-api";
 import {
@@ -103,7 +104,9 @@ export function SiteHeader() {
   const { data: shopSettings } = useShopSettings();
   const nav = settings.navbar;
   const brandName = shopSettings?.shopTitle || nav.brandName;
-  const logoUrl = shopSettings?.logoUrl;
+  const logoUrl = shopSettings?.logoUrl
+    ? resolveProductImageUrl(shopSettings.logoUrl)
+    : null;
   const industryPreset = useMemo(
     () => getShopIndustryPreset(shopSettings?.industryKey),
     [shopSettings?.industryKey],

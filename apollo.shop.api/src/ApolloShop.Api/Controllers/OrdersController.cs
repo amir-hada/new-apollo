@@ -26,5 +26,7 @@ public class OrdersController : ControllerBase
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateOrderRequest request, CancellationToken cancellationToken) =>
-        Ok(await _mediator.Send(new CreateOrderCommand(request.AddressId, request.Notes), cancellationToken));
+        Ok(await _mediator.Send(
+            new CreateOrderCommand(request.AddressId, request.Notes, request.CouponCode),
+            cancellationToken));
 }

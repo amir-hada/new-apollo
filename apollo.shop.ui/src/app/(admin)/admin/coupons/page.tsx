@@ -2,12 +2,14 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { EmptyState } from "@/components/shared/States";
+import { EmptyState, ErrorState } from "@/components/shared/States";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -17,88 +19,86 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toPersianDigits } from "@/features/auth/normalize-phone";
+import { api, getApiErrorMessage } from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
+import type { Coupon } from "@/types/api";
 
-type LocalCoupon = {
-  id: string;
-  code: string;
-  percentOff: string;
-  amountOff: string;
-  isActive: boolean;
-  maxUses: string;
-};
-
-const STORAGE_KEY = "apolloshop.admin-coupons";
-
-function loadCoupons(): LocalCoupon[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as LocalCoupon[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCoupons(items: LocalCoupon[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-}
+const COUPONS_QUERY_KEY = ["admin-coupons"] as const;
 
 export default function AdminCouponsPage() {
-  const [items, setItems] = useState<LocalCoupon[]>(() => loadCoupons());
+  const queryClient = useQueryClient();
   const [code, setCode] = useState("");
   const [percentOff, setPercentOff] = useState("");
   const [amountOff, setAmountOff] = useState("");
   const [maxUses, setMaxUses] = useState("");
   const [isActive, setIsActive] = useState(true);
 
+  const coupons = useQuery({
+    queryKey: COUPONS_QUERY_KEY,
+    queryFn: async () => (await api.get<Coupon[]>("/api/admin/coupons")).data,
+  });
+
   const activeCount = useMemo(
-    () => items.filter((c) => c.isActive).length,
-    [items],
+    () => (coupons.data ?? []).filter((c) => c.isActive).length,
+    [coupons.data],
   );
 
-  function persist(next: LocalCoupon[]) {
-    setItems(next);
-    saveCoupons(next);
-  }
+  const createCoupon = useMutation({
+    mutationFn: async () => {
+      const normalized = code.trim().toUpperCase();
+      if (!normalized) throw new Error("کد تخفیف را وارد کنید");
+      if (!percentOff.trim() && !amountOff.trim()) {
+        throw new Error("درصد یا مبلغ تخفیف را مشخص کنید");
+      }
+      const { data } = await api.post<Coupon>("/api/admin/coupons", {
+        code: normalized,
+        percentOff: percentOff.trim() ? Number(percentOff) : null,
+        amountOff: amountOff.trim() ? Number(amountOff) : null,
+        isActive,
+        maxUses: maxUses.trim() ? Number(maxUses) : null,
+        startsAtUtc: null,
+        endsAtUtc: null,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: COUPONS_QUERY_KEY });
+      setCode("");
+      setPercentOff("");
+      setAmountOff("");
+      setMaxUses("");
+      setIsActive(true);
+      toast.success("کد تخفیف اضافه شد");
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+
+  const toggleActive = useMutation({
+    mutationFn: async ({ id, next }: { id: string; next: boolean }) =>
+      (await api.put<Coupon>(`/api/admin/coupons/${id}/active`, { isActive: next })).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: COUPONS_QUERY_KEY });
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+
+  const deleteCoupon = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/admin/coupons/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: COUPONS_QUERY_KEY });
+      toast.success("کد حذف شد");
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    const normalized = code.trim().toUpperCase();
-    if (!normalized) {
-      toast.error("کد تخفیف را وارد کنید");
-      return;
-    }
-    if (items.some((c) => c.code === normalized)) {
-      toast.error("این کد قبلاً ثبت شده است");
-      return;
-    }
-    if (!percentOff.trim() && !amountOff.trim()) {
-      toast.error("درصد یا مبلغ تخفیف را مشخص کنید");
-      return;
-    }
-
-    const next: LocalCoupon[] = [
-      {
-        id: crypto.randomUUID(),
-        code: normalized,
-        percentOff: percentOff.trim(),
-        amountOff: amountOff.trim(),
-        maxUses: maxUses.trim(),
-        isActive,
-      },
-      ...items,
-    ];
-    persist(next);
-    setCode("");
-    setPercentOff("");
-    setAmountOff("");
-    setMaxUses("");
-    setIsActive(true);
-    toast.success("کد تخفیف اضافه شد");
+    createCoupon.mutate();
   }
+
+  const items = coupons.data ?? [];
 
   return (
     <div className="space-y-4">
@@ -154,23 +154,35 @@ export default function AdminCouponsPage() {
             <Switch checked={isActive} onCheckedChange={setIsActive} />
             <Label className="text-sm font-normal">فعال</Label>
           </div>
-          <Button type="submit" className="h-9">
-            افزودن
+          <Button type="submit" className="h-9" disabled={createCoupon.isPending}>
+            {createCoupon.isPending ? "..." : "افزودن"}
           </Button>
         </div>
       </form>
 
-      <p className="text-xs text-muted-foreground">
-        {toPersianDigits(String(items.length))} کد ·{" "}
-        {toPersianDigits(String(activeCount))} فعال
-      </p>
+      {coupons.isLoading && <Skeleton className="h-40 w-full" />}
+      {coupons.isError && (
+        <ErrorState
+          message={getApiErrorMessage(coupons.error)}
+          onRetry={() => coupons.refetch()}
+        />
+      )}
 
-      {items.length === 0 ? (
+      {!coupons.isLoading && !coupons.isError ? (
+        <p className="text-xs text-muted-foreground">
+          {toPersianDigits(String(items.length))} کد ·{" "}
+          {toPersianDigits(String(activeCount))} فعال
+        </p>
+      ) : null}
+
+      {!coupons.isLoading && !coupons.isError && items.length === 0 ? (
         <EmptyState
           title="کد تخفیفی ثبت نشده"
           description="اولین کد تخفیف فروشگاه را از فرم بالا اضافه کنید."
         />
-      ) : (
+      ) : null}
+
+      {items.length > 0 ? (
         <div className="overflow-x-auto rounded-xl border border-border">
           <Table>
             <TableHeader>
@@ -178,7 +190,7 @@ export default function AdminCouponsPage() {
                 <TableHead>کد</TableHead>
                 <TableHead>درصد</TableHead>
                 <TableHead>مبلغ</TableHead>
-                <TableHead>سقف</TableHead>
+                <TableHead>سقف / استفاده</TableHead>
                 <TableHead>وضعیت</TableHead>
                 <TableHead />
               </TableRow>
@@ -190,15 +202,17 @@ export default function AdminCouponsPage() {
                     {c.code}
                   </TableCell>
                   <TableCell>
-                    {c.percentOff
-                      ? `${toPersianDigits(c.percentOff)}٪`
+                    {c.percentOff != null
+                      ? `${toPersianDigits(String(c.percentOff))}٪`
                       : "—"}
                   </TableCell>
                   <TableCell>
-                    {c.amountOff ? formatPrice(Number(c.amountOff) || 0) : "—"}
+                    {c.amountOff != null ? formatPrice(c.amountOff) : "—"}
                   </TableCell>
                   <TableCell>
-                    {c.maxUses ? toPersianDigits(c.maxUses) : "نامحدود"}
+                    {toPersianDigits(String(c.usedCount))}
+                    {" / "}
+                    {c.maxUses != null ? toPersianDigits(String(c.maxUses)) : "∞"}
                   </TableCell>
                   <TableCell>{c.isActive ? "فعال" : "غیرفعال"}</TableCell>
                   <TableCell className="text-end">
@@ -207,14 +221,9 @@ export default function AdminCouponsPage() {
                         type="button"
                         size="sm"
                         variant="ghost"
+                        disabled={toggleActive.isPending}
                         onClick={() =>
-                          persist(
-                            items.map((x) =>
-                              x.id === c.id
-                                ? { ...x, isActive: !x.isActive }
-                                : x,
-                            ),
-                          )
+                          toggleActive.mutate({ id: c.id, next: !c.isActive })
                         }
                       >
                         {c.isActive ? "غیرفعال" : "فعال"}
@@ -224,10 +233,8 @@ export default function AdminCouponsPage() {
                         size="icon"
                         variant="ghost"
                         className="size-8"
-                        onClick={() => {
-                          persist(items.filter((x) => x.id !== c.id));
-                          toast.success("کد حذف شد");
-                        }}
+                        disabled={deleteCoupon.isPending}
+                        onClick={() => deleteCoupon.mutate(c.id)}
                       >
                         <Trash2 className="size-4 text-destructive" />
                       </Button>
@@ -238,7 +245,7 @@ export default function AdminCouponsPage() {
             </TableBody>
           </Table>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -12,7 +12,6 @@ const ADMIN_PAGE_TITLES: { match: RegExp; title: string }[] = [
   { match: /^\/admin\/coupons/, title: "کد تخفیف" },
   { match: /^\/admin\/orders/, title: "سفارش‌ها" },
   { match: /^\/admin\/users/, title: "کاربران" },
-  { match: /^\/admin\/apps/, title: "قابلیت‌ها" },
   { match: /^\/admin\/chats/, title: "پشتیبانی" },
   { match: /^\/admin\/blog/, title: "بلاگ" },
   { match: /^\/admin\/tickets/, title: "تیکت‌ها" },

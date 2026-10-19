@@ -28,6 +28,10 @@ public class ShopSettingsConfiguration : IEntityTypeConfiguration<ShopSettings>
         builder.Property(x => x.HomeStoriesJson).HasColumnType("nvarchar(max)");
         builder.Property(x => x.SmsOtpEnabled).HasDefaultValue(true);
         builder.Property(x => x.SmsOrderEnabled).HasDefaultValue(true);
+        builder.Property(x => x.ShippingEnabled).HasDefaultValue(true);
+        builder.Property(x => x.FlatShippingRate).HasPrecision(18, 2).HasDefaultValue(50_000m);
+        builder.Property(x => x.FreeShippingThreshold).HasPrecision(18, 2);
+        builder.Property(x => x.ShippingCustomerNote).HasMaxLength(1000);
         builder.Property(x => x.CreatedBy).HasMaxLength(256);
         builder.Property(x => x.UpdatedBy).HasMaxLength(256);
 

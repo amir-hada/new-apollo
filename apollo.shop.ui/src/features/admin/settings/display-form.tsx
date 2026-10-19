@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 const items = [
   { id: "recents", label: "اخیر" },
   { id: "home", label: "خانه" },
-  { id: "applications", label: "قابلیت‌ها" },
   { id: "desktop", label: "دسکتاپ" },
   { id: "downloads", label: "دانلودها" },
   { id: "documents", label: "اسناد" },

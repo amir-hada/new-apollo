@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { cn } from "@/lib/utils";
 import type { HomeStory } from "@/types/api";
 
@@ -96,7 +97,7 @@ function StoryViewer({
         <div className="relative aspect-[9/16] max-h-[min(80vh,720px)] w-full">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={current.imageUrl}
+            src={resolveProductImageUrl(current.imageUrl)}
             alt={current.title}
             className="absolute inset-0 size-full object-cover"
           />
@@ -180,7 +181,7 @@ export function HomeStories({ stories }: { stories: HomeStory[] }) {
                 <span className="block rounded-full bg-background p-[2px]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={story.imageUrl}
+                    src={resolveProductImageUrl(story.imageUrl)}
                     alt=""
                     className="size-[60px] rounded-full object-cover sm:size-[68px]"
                   />

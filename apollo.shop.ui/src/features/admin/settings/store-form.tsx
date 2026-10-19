@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { CurrencySelect } from "@/features/admin/settings/currency-select";
 import { api, getApiErrorMessage } from "@/lib/api";
+import { resolveProductImageUrl } from "@/lib/product-image";
 import { DEFAULT_SHOP_PRIMARY } from "@/lib/shop-primary-color";
 import { setActiveShopCurrency } from "@/lib/shop-currency";
 import { SHOP_INDUSTRY_OPTIONS } from "@/lib/shop-industry-presets";
@@ -318,7 +319,11 @@ function AssetUploader({
         <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-background">
           {url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={url} alt={label} className="size-full object-contain" />
+            <img
+              src={resolveProductImageUrl(url)}
+              alt={label}
+              className="size-full object-contain"
+            />
           ) : (
             <ImagePlus className="size-4 text-muted-foreground" />
           )}

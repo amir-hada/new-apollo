@@ -112,9 +112,16 @@ static bool IsOriginAllowed(string origin, ISet<string> configuredOrigins)
     }
 
     // Local development: localhost and *.localhost on any port (e.g. shop2.localhost:3000).
-    return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+    if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
         || uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase)
-        || uri.Host == "127.0.0.1";
+        || uri.Host == "127.0.0.1")
+    {
+        return true;
+    }
+
+    // Temporary production tenancy: allow any subdomain of apolloapp.ir
+    return uri.Host.Equals("apolloapp.ir", StringComparison.OrdinalIgnoreCase)
+        || uri.Host.EndsWith(".apolloapp.ir", StringComparison.OrdinalIgnoreCase);
 }
 
 public partial class Program;

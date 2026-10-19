@@ -12,7 +12,7 @@ type FloatingLabelInputProps = Omit<
   React.ComponentProps<typeof InputPrimitive>,
   "placeholder"
 > & {
-  label: string
+  label: React.ReactNode
   invalid?: boolean
   inputClassName?: string
   labelClassName?: string

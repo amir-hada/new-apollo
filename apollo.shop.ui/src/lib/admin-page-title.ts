@@ -16,6 +16,7 @@ const ADMIN_PAGE_TITLES: { match: RegExp; title: string }[] = [
   { match: /^\/admin\/blog/, title: "بلاگ" },
   { match: /^\/admin\/tickets/, title: "تیکت‌ها" },
   { match: /^\/admin\/settings/, title: "تنظیمات" },
+  { match: /^\/admin\/billing/, title: "صورتحساب" },
   { match: /^\/admin\/help/, title: "راهنما" },
   { match: /^\/admin/, title: "پنل مدیریت" },
 ];

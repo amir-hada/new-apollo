@@ -1,5 +1,5 @@
 import * as React from "react"
-import { ImageIcon, Loader2Icon } from "lucide-react"
+import { CheckIcon, ImageIcon, Loader2Icon, SparklesIcon } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import digipayLogo from "@/assets/loan-logo/digipay.jpeg"
@@ -32,48 +32,65 @@ function getDiscountPercent(price: number, discounted: number) {
   return Math.round(((price - discounted) / price) * 100)
 }
 
+function isFeaturedPlan(plan: PublicPlanListItem, plans: PublicPlanListItem[]) {
+  if (plans.length < 3) return false
+  const paid = plans
+    .filter((item) => item.priceInToman > 0)
+    .slice()
+    .sort((a, b) => a.priceInToman - b.priceInToman)
+  if (paid.length === 0) return false
+  const mid = paid[Math.floor((paid.length - 1) / 2)]
+  return mid?.planId === plan.planId
+}
+
 function PlanHero({
   src,
   alt,
+  featured,
 }: {
   src: string | null
   alt: string
+  featured: boolean
 }) {
   const [failed, setFailed] = React.useState(false)
   const showImage = Boolean(src) && !failed
 
   return (
-    <div className="relative aspect-[16/11] w-full shrink-0 overflow-hidden bg-card">
+    <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden">
       {showImage ? (
         <img
           src={src!}
           alt={alt}
-          className="absolute inset-0 size-full object-cover object-center"
+          className="absolute inset-0 size-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.04]"
           onError={() => setFailed(true)}
         />
       ) : (
         <div
           aria-hidden
-          className="absolute inset-0 flex items-center justify-center"
+          className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_top,color-mix(in_oklch,var(--primary)_18%,transparent),transparent_65%)]"
         >
-          <ImageIcon className="size-10 text-white/25" />
+          <div className="absolute inset-0 bg-[linear-gradient(145deg,color-mix(in_oklch,var(--primary)_12%,transparent),transparent_50%,color-mix(in_oklch,var(--primary-soft)_10%,transparent))]" />
+          <ImageIcon className="relative size-10 text-white/20" />
         </div>
       )}
 
-      {/* Soft multi-stop fade into card — no hard seam */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%]"
-        style={{
-          backgroundImage:
-            "linear-gradient(to top, var(--card) 0%, color-mix(in oklch, var(--card) 92%, transparent) 18%, color-mix(in oklch, var(--card) 72%, transparent) 36%, color-mix(in oklch, var(--card) 45%, transparent) 55%, color-mix(in oklch, var(--card) 18%, transparent) 75%, transparent 100%)",
-        }}
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,var(--card)_0%,color-mix(in_oklch,var(--card)_88%,transparent)_22%,color-mix(in_oklch,var(--card)_40%,transparent)_55%,transparent_100%)]"
       />
+
+      {featured ? (
+        <div className="absolute start-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-md border border-primary/35 bg-primary/15 px-2.5 py-1 text-[11px] font-medium text-primary backdrop-blur-md">
+          <SparklesIcon className="size-3.5" aria-hidden />
+          پیشنهاد ویژه
+        </div>
+      ) : null}
     </div>
   )
 }
 
 function PlanPrice({ plan }: { plan: PublicPlanListItem }) {
+  const isFree = plan.priceInToman === 0
   const hasDiscount =
     plan.discountedPriceInToman !== null &&
     plan.discountedPriceInToman < plan.priceInToman
@@ -82,42 +99,46 @@ function PlanPrice({ plan }: { plan: PublicPlanListItem }) {
     : null
 
   return (
-    <div className="flex flex-col items-center gap-1 text-center">
-      {hasDiscount ? (
+    <div className="flex flex-col items-center gap-1.5 text-center">
+      {isFree ? (
+        <p className="font-heading text-3xl font-semibold tracking-tight text-emerald-300 sm:text-[2rem]">
+          رایگان
+        </p>
+      ) : hasDiscount ? (
         <>
           <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
-            <p className="text-sm text-red-400 line-through decoration-red-400/90">
+            <p className="text-sm text-white/35 line-through decoration-white/35">
               {formatPrice(plan.priceInToman)}
             </p>
             {discountPercent ? (
-              <span className="rounded-[4px] bg-emerald-500/15 px-1.5 py-0.5 text-[11px] font-medium text-emerald-300">
+              <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[11px] font-medium text-emerald-300 ring-1 ring-emerald-400/20">
                 {discountPercent.toLocaleString("fa-IR")}٪ تخفیف
               </span>
             ) : null}
           </div>
-          <p className="font-heading text-3xl font-semibold tracking-tight text-emerald-300">
+          <p className="font-heading text-3xl font-semibold tracking-tight text-emerald-300 sm:text-[2rem]">
             {formatPrice(plan.discountedPriceInToman!)}
-            <span className="ms-1.5 text-base font-normal text-emerald-300/80">
+            <span className="ms-1.5 text-base font-normal text-emerald-300/75">
               تومان
             </span>
           </p>
         </>
       ) : (
-        <p className="font-heading text-3xl font-semibold tracking-tight text-emerald-300">
+        <p className="font-heading text-3xl font-semibold tracking-tight text-emerald-300 sm:text-[2rem]">
           {formatPrice(plan.priceInToman)}
-          <span className="ms-1.5 text-base font-normal text-emerald-300/80">
+          <span className="ms-1.5 text-base font-normal text-emerald-300/75">
             تومان
           </span>
         </p>
       )}
-      <p className="text-xs text-muted-foreground">
-        {getBillingPeriodLabel(plan.billingPeriod)}
+      <p className="text-xs tracking-wide text-muted-foreground">
+        {isFree ? "بدون محدودیت زمانی" : getBillingPeriodLabel(plan.billingPeriod)}
       </p>
     </div>
   )
 }
 
-function PlanPropertiesTable({
+function PlanPropertiesList({
   properties,
 }: {
   properties: PublicPlanListItem["properties"]
@@ -131,104 +152,105 @@ function PlanPropertiesTable({
   }
 
   return (
-    <table className="w-full border-collapse overflow-hidden rounded-[4px] border border-white/10 text-xs">
-      <tbody>
-        {properties.map((property, index) => (
-          <tr
-            key={`${property.title}-${index}`}
-            className="border-b border-white/8 last:border-b-0"
-          >
-            <th
-              scope="row"
-              className="w-1/2 border-e border-white/8 bg-white/[0.04] px-2.5 py-2 text-center font-normal text-foreground"
-            >
-              {property.title}
-            </th>
-            <td className="w-1/2 px-2.5 py-2 text-center text-muted-foreground">
-              {property.value}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <ul className="flex flex-col gap-2.5">
+      {properties.map((property, index) => (
+        <li
+          key={`${property.title}-${index}`}
+          className="flex items-start gap-2.5 rounded-md bg-white/[0.03] px-3 py-2.5 ring-1 ring-white/[0.06]"
+        >
+          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded bg-primary/15 text-primary">
+            <CheckIcon className="size-3" strokeWidth={2.5} aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p className="text-[11px] text-muted-foreground">{property.title}</p>
+            <p className="text-sm leading-snug text-foreground">{property.value}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
   )
 }
 
 function PlanPanel({
   plan,
   delay,
+  featured,
 }: {
   plan: PublicPlanListItem
   delay: number
+  featured: boolean
 }) {
   const isAvailable = plan.isAvailable
 
   return (
     <article
-      className="motion-safe:animate-hero-fade-up h-full"
+      className={cn(
+        "group motion-safe:animate-hero-fade-up relative h-full",
+        featured && "xl:z-10 xl:-my-2"
+      )}
       style={{ animationDelay: `${delay}ms` }}
     >
+      {featured ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-px rounded-xl bg-[linear-gradient(160deg,color-mix(in_oklch,var(--primary)_55%,transparent),transparent_40%,color-mix(in_oklch,var(--primary-soft)_35%,transparent))] opacity-90 blur-[1px]"
+        />
+      ) : null}
+
       <div
         className={cn(
-          "relative flex h-full flex-col overflow-hidden rounded-[4px]",
-          "border border-white/12 bg-card",
-          "shadow-[0_8px_40px_rgba(0,0,0,0.28)]"
+          "relative flex h-full flex-col overflow-hidden rounded-xl",
+          "border bg-card/90 backdrop-blur-sm",
+          "transition-[transform,box-shadow,border-color] duration-500 ease-out",
+          "hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(0,0,0,0.35)]",
+          featured
+            ? "border-primary/40 shadow-[0_20px_50px_rgba(0,0,0,0.35),0_0_0_1px_color-mix(in_oklch,var(--primary)_25%,transparent)]"
+            : "border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.22)] hover:border-white/20"
         )}
       >
-        <PlanHero src={plan.imageUrl} alt={plan.name} />
+        <PlanHero src={plan.imageUrl} alt={plan.name} featured={featured} />
 
-        <div className="relative z-10 -mt-16 flex flex-1 flex-col gap-4 px-4 pt-6 pb-4">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 -top-16"
-            style={{
-              backgroundImage:
-                "linear-gradient(to bottom, transparent 0%, color-mix(in oklch, var(--card) 35%, transparent) 28%, color-mix(in oklch, var(--card) 85%, transparent) 55%, var(--card) 78%)",
-            }}
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-[40%] bottom-0 bg-card"
-          />
-
-          <header className="relative z-10 space-y-2 text-center">
-            <h3 className="font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-[1.65rem]">
+        <div className="relative z-10 -mt-14 flex flex-1 flex-col gap-5 px-5 pt-5 pb-5">
+          <header className="space-y-2 text-center">
+            <h3 className="font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-[1.7rem]">
               {plan.name}
             </h3>
-            <p className="truncate text-sm leading-6 text-muted-foreground">
+            <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
               {plan.description}
             </p>
           </header>
 
-          <div className="relative z-10">
-            <PlanPrice plan={plan} />
-          </div>
+          <PlanPrice plan={plan} />
 
-          <div className="relative z-10">
-            <PlanPropertiesTable properties={plan.properties} />
-          </div>
+          <div className="h-px w-full bg-linear-to-l from-transparent via-white/12 to-transparent" />
+
+          <PlanPropertiesList properties={plan.properties} />
 
           {plan.allowsInstallment ? (
-            <div className="relative z-10 flex flex-wrap items-center justify-center gap-2">
-              <p className="text-[11px] text-muted-foreground">خرید اقساطی با :</p>
+            <div className="flex flex-wrap items-center justify-center gap-2 rounded-md bg-white/[0.03] px-3 py-2.5 ring-1 ring-white/[0.06]">
+              <p className="text-[11px] text-muted-foreground">خرید اقساطی با</p>
               <div className="flex items-center gap-1.5">
                 {loanPartners.map((partner) => (
                   <img
                     key={partner.alt}
                     src={partner.src}
                     alt={partner.alt}
-                    className="size-7 rounded-[4px] object-cover ring-1 ring-white/10"
+                    className="size-7 rounded-md object-cover ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-105"
                   />
                 ))}
               </div>
             </div>
           ) : null}
 
-          <div className="relative z-10 mt-auto flex flex-col gap-2 pt-1">
+          <div className="mt-auto flex flex-col gap-2.5 pt-1">
             {isAvailable ? (
               <Button
                 size="lg"
-                className="h-10 w-full rounded-[4px] bg-primary font-normal text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90"
+                className={cn(
+                  "h-11 w-full rounded-lg font-normal text-primary-foreground",
+                  "bg-primary shadow-lg shadow-primary/25 hover:bg-primary/90",
+                  featured && "shadow-primary/40"
+                )}
                 render={<Link to="/auth" />}
               >
                 شروع با ۷۲ ساعت تست رایگان
@@ -237,7 +259,7 @@ function PlanPanel({
               <Button
                 size="lg"
                 disabled
-                className="h-10 w-full rounded-[4px] border-0 bg-zinc-600 font-normal text-white hover:bg-zinc-600 disabled:opacity-100"
+                className="h-11 w-full rounded-lg border-0 bg-zinc-600 font-normal text-white hover:bg-zinc-600 disabled:opacity-100"
               >
                 به زودی
               </Button>
@@ -246,7 +268,7 @@ function PlanPanel({
             <Button
               size="lg"
               variant="outline"
-              className="h-10 w-full rounded-[4px] border-white/15 bg-transparent font-normal text-foreground hover:bg-white/5 hover:text-foreground"
+              className="h-11 w-full rounded-lg border-white/12 bg-transparent font-normal text-foreground hover:border-white/20 hover:bg-white/[0.04] hover:text-foreground"
             >
               جزئیات بیشتر
             </Button>
@@ -263,14 +285,15 @@ function PlansLoadingState() {
       {Array.from({ length: 3 }).map((_, index) => (
         <div
           key={index}
-          className="overflow-hidden rounded-[4px] border border-white/10"
+          className="overflow-hidden rounded-xl border border-white/10"
         >
-          <Skeleton className="aspect-[16/11] w-full rounded-none" />
-          <div className="space-y-3 bg-card p-4">
+          <Skeleton className="aspect-[16/10] w-full rounded-none" />
+          <div className="space-y-3 bg-card p-5">
             <Skeleton className="mx-auto h-6 w-40" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-10 w-full" />
+            <Skeleton className="mx-auto h-4 w-56" />
+            <Skeleton className="mx-auto h-10 w-32" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-11 w-full" />
           </div>
         </div>
       ))}
@@ -278,8 +301,63 @@ function PlansLoadingState() {
   )
 }
 
+function BillingPeriodToggle({
+  value,
+  onChange,
+}: {
+  value: "Monthly" | "Yearly"
+  onChange: (next: "Monthly" | "Yearly") => void
+}) {
+  return (
+    <div className="flex justify-center">
+      <div
+        role="group"
+        aria-label="مدت اشتراک"
+        className="inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+      >
+        {(
+          [
+            { value: "Monthly" as const, label: "ماهانه" },
+            { value: "Yearly" as const, label: "سالانه", hint: "صرفه‌جویی بیشتر" },
+          ] as const
+        ).map((option) => {
+          const active = value === option.value
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+              className={cn(
+                "min-w-[7.5rem] rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200",
+                active
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/30"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {option.label}
+              {"hint" in option && option.hint ? (
+                <span
+                  className={cn(
+                    "ms-1.5 text-[11px]",
+                    active ? "text-primary-foreground/80" : "text-emerald-300/90"
+                  )}
+                >
+                  {option.hint}
+                </span>
+              ) : null}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function PlansSection() {
   const [plans, setPlans] = React.useState<PublicPlanListItem[]>([])
+  const [billingPeriod, setBillingPeriod] = React.useState<"Monthly" | "Yearly">(
+    "Monthly"
+  )
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -313,14 +391,41 @@ export function PlansSection() {
     }
   }, [])
 
+  const visiblePlans = React.useMemo(() => {
+    return plans
+      .filter(
+        (plan) =>
+          plan.billingPeriod === billingPeriod || plan.priceInToman === 0
+      )
+      .slice()
+      .sort((a, b) => a.priceInToman - b.priceInToman)
+  }, [plans, billingPeriod])
+
+  const hasYearlyPlans = plans.some((plan) => plan.billingPeriod === "Yearly")
+
   return (
-    <section id="plans" className="scroll-mt-20">
+    <section id="plans" className="relative scroll-mt-20 overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+      >
+        <div className="absolute top-1/4 start-1/2 size-[36rem] -translate-x-1/2 rounded-full bg-primary/10 blur-[120px]" />
+        <div className="absolute bottom-0 end-0 size-72 rounded-full bg-primary-soft/10 blur-[100px]" />
+      </div>
+
       <Container className="flex flex-col gap-12 py-20 sm:py-24">
         <SectionHeading
           eyebrow="پلن‌ها"
-          title="پلن مناسب کسب‌وکار خود را انتخاب کنید"
-          description="پلن‌های آپولو با ویژگی‌ها و قیمت‌های شفاف؛ هر زمان بخواهید می‌توانید ارتقا دهید."
+          title="از رایگان شروع کنید، هر وقت لازم بود ارتقا دهید"
+          description="سه سطح ساده: پایه برای شروع، استاندارد برای فروش فعال، پیشرفته برای کسب‌وکار جدی — با انتخاب مدت ماهانه یا سالانه."
         />
+
+        {!isLoading && !error && hasYearlyPlans ? (
+          <BillingPeriodToggle
+            value={billingPeriod}
+            onChange={setBillingPeriod}
+          />
+        ) : null}
 
         {isLoading ? (
           <PlansLoadingState />
@@ -328,7 +433,7 @@ export function PlansSection() {
           <p className="text-center text-sm text-destructive" role="alert">
             {error}
           </p>
-        ) : plans.length === 0 ? (
+        ) : visiblePlans.length === 0 ? (
           <p className="text-center text-sm text-muted-foreground">
             در حال حاضر پلنی برای نمایش وجود ندارد.
           </p>
@@ -336,15 +441,20 @@ export function PlansSection() {
           <div
             className={cn(
               "grid items-stretch gap-6 lg:gap-7",
-              plans.length === 1
+              visiblePlans.length === 1
                 ? "mx-auto w-full max-w-md"
-                : plans.length === 2
+                : visiblePlans.length === 2
                   ? "md:grid-cols-2"
                   : "md:grid-cols-2 xl:grid-cols-3"
             )}
           >
-            {plans.map((plan, index) => (
-              <PlanPanel key={plan.planId} plan={plan} delay={index * 90} />
+            {visiblePlans.map((plan, index) => (
+              <PlanPanel
+                key={plan.planId}
+                plan={plan}
+                delay={index * 90}
+                featured={isFeaturedPlan(plan, visiblePlans)}
+              />
             ))}
           </div>
         )}

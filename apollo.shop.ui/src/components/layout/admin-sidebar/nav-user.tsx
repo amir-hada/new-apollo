@@ -7,7 +7,6 @@ import {
   ChevronsUpDown,
   CreditCard,
   LogOut,
-  Sparkles,
   User,
 } from "lucide-react";
 import {
@@ -92,22 +91,15 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Sparkles />
-                ارتقا به نسخه حرفه‌ای
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
               <DropdownMenuItem render={<Link href="/admin/settings" />}>
                 <BadgeCheck />
                 حساب کاربری
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/admin/billing" />}>
                 <CreditCard />
                 صورتحساب
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/admin/settings?tab=notifications" />}>
                 <Bell />
                 اعلان‌ها
               </DropdownMenuItem>
